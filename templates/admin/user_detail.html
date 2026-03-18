@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}User Details - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="row mb-4 align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-0">
+                        <i class="fas fa-user"></i> {{ user.username }}
+                    </h1>
+                </div>
+                <div class="col-md-4 text-right">
+                    <a href="/admin/users" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Users
+                    </a>
+                </div>
+            </div>
+
+            {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Error:</strong> {{ error }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endif %}
+
+            {% if success %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <strong><i class="fas fa-check-circle"></i> Success!</strong> Changes saved successfully.
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endif %}
+
+            <!-- User Information -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-id-card"></i> User Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-5">Username:</dt>
+                                <dd class="col-sm-7"><strong>{{ user.username }}</strong></dd>
+
+                                <dt class="col-sm-5">Email:</dt>
+                                <dd class="col-sm-7"><a href="mailto:{{ user.email }}">{{ user.email }}</a></dd>
+
+                                <dt class="col-sm-5">User ID:</dt>
+                                <dd class="col-sm-7"><code>{{ user.id }}</code></dd>
+
+                                <dt class="col-sm-5">Status:</dt>
+                                <dd class="col-sm-7">
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Inactive</span>
+                                    {% endif %}
+                                </dd>
+
+                                <dt class="col-sm-5">Created:</dt>
+                                <dd class="col-sm-7"><small>{{ user.created_at|strftime('%d %B %Y at %H:%M') }}</small></dd>
+
+                                <dt class="col-sm-5">Last Login:</dt>
+                                <dd class="col-sm-7">
+                                    <small>
+                                        {% if user.last_login %}
+                                            {{ user.last_login|strftime('%d %B %Y at %H:%M') }}
+                                        {% else %}
+                                            <span class="text-muted">Never logged in</span>
+                                        {% endif %}
+                                    </small>
+                                </dd>
+
+                                <dt class="col-sm-5">Failed Logins:</dt>
+                                <dd class="col-sm-7">
+                                    {{ user.failed_login_attempts }}
+                                    {% if user.failed_login_attempts > 0 %}
+                                        <button class="btn btn-sm btn-warning ml-2" onclick="resetFailedAttempts()">
+                                            <i class="fas fa-sync"></i> Reset
+                                        </button>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role and Hospital -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Role & Hospital</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="updateRoleForm" method="POST" action="/admin/users/{{ user.id }}/role">
+                                <div class="form-group">
+                                    <label for="newRole">
+                                        <i class="fas fa-shield-alt"></i> Current Role
+                                    </label>
+                                    <div class="input-group">
+                                        <select class="form-control" id="newRole" name="role_id">
+                                            <option value="1" {% if user.role_id == 1 %}selected{% endif %}>SUPER_ADMIN</option>
+                                            <option value="2" {% if user.role_id == 2 %}selected{% endif %}>BLOOD_BANK_ADMIN</option>
+                                            <option value="3" {% if user.role_id == 3 %}selected{% endif %}>STAFF_MEMBER</option>
+                                            <option value="4" {% if user.role_id == 4 %}selected{% endif %}>HOSPITAL_USER</option>
+                                            <option value="5" {% if user.role_id == 5 %}selected{% endif %}>DONOR</option>
+                                        </select>
+                                        <div class="input-group-append">
+                                            <button class="btn btn-primary" type="submit">Update</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <hr>
+
+                            <div class="form-group">
+                                <label for="hospital">
+                                    <i class="fas fa-hospital"></i> Assigned Hospital
+                                </label>
+                                {% if user.hospital_name %}
+                                    <p><strong>{{ user.hospital_name }}</strong></p>
+                                {% else %}
+                                    <p class="text-muted">
+                                        Not assigned to a hospital
+                                        {% if user.role_id == 4 %}
+                                            <br><small class="text-danger">⚠️ Required for HOSPITAL_USER role</small>
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-lock"></i> Permissions (Role: <strong>{{ user.role_name }}</strong>)</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if user.role_permissions %}
+                                <div class="row">
+                                    {% for perm in user.role_permissions %}
+                                    <div class="col-md-6 mb-3">
+                                        <div class="alert alert-light border-left border-primary">
+                                            <strong><i class="fas fa-check-circle text-primary"></i> {{ perm.permission_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ perm.description|default('No description') }}</small>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    This role has no permissions assigned.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                {% if user.activity_logs %}
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>Action</th>
+                                                <th>Description</th>
+                                                <th>Timestamp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for log in user.activity_logs %}
+                                            <tr>
+                                                <td>
+                                                    {% if log.action == 'login' %}
+                                                        <span class="badge bg-info text-dark"><i class="fas fa-sign-in-alt"></i> Login</span>
+                                                    {% elif log.action == 'logout' %}
+                                                        <span class="badge bg-secondary"><i class="fas fa-sign-out-alt"></i> Logout</span>
+                                                    {% elif log.action == 'role_changed' %}
+                                                        <span class="badge bg-warning text-dark"><i class="fas fa-exchange-alt"></i> Role Changed</span>
+                                                    {% elif log.action == 'deactivated' %}
+                                                        <span class="badge bg-danger"><i class="fas fa-ban"></i> Deactivated</span>
+                                                    {% elif log.action == 'reactivated' %}
+                                                        <span class="badge bg-success"><i class="fas fa-redo"></i> Reactivated</span>
+                                                    {% else %}
+                                                        <span class="badge bg-light text-dark">{{ log.action }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td><small>{{ log.description }}</small></td>
+                                                <td><small>{{ log.timestamp|strftime('%d/%m/%Y %H:%M') }}</small></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% else %}
+                                    <p class="text-muted mb-0">No activity recorded yet</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Danger Zone</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                These actions cannot be undone. Proceed with caution.
+                            </p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {% if user.is_active %}
+                                        <button class="btn btn-danger btn-block" onclick="deactivateUser()">
+                                            <i class="fas fa-ban"></i> Deactivate User
+                                        </button>
+                                        <small class="text-muted d-block mt-2">
+                                            User will not be able to login
+                                        </small>
+                                    {% else %}
+                                        <button class="btn btn-success btn-block" onclick="reactivateUser()">
+                                            <i class="fas fa-redo"></i> Reactivate User
+                                        </button>
+                                        <small class="text-muted d-block mt-2">
+                                            User will be able to login again
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-warning btn-block" onclick="resetPassword()">
+                                        <i class="fas fa-lock"></i> Force Password Reset
+                                    </button>
+                                    <small class="text-muted d-block mt-2">
+                                        User must change password on next login
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        margin-bottom: 1rem;
+    }
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transition: box-shadow 0.3s ease-in-out;
+    }
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+    }
+</style>
+
+<script>
+    function deactivateUser() {
+        if (confirm('Are you sure you want to deactivate this user?\n\nThey will not be able to login.')) {
+            fetch('/admin/users/{{ user.id }}/deactivate', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User deactivated successfully');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred');
+                });
+        }
+    }
+
+    function reactivateUser() {
+        if (confirm('Are you sure you want to reactivate this user?\n\nThey will be able to login again.')) {
+            fetch('/admin/users/{{ user.id }}/reactivate', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('User reactivated successfully');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred');
+                });
+        }
+    }
+
+    function resetFailedAttempts() {
+        if (confirm('Reset failed login attempts for this user?')) {
+            fetch('/admin/users/{{ user.id }}/reset-login', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Failed attempts reset');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred');
+                });
+        }
+    }
+
+    function resetPassword() {
+        alert('Password reset feature coming soon. Currently, user must contact administrator.');
+    }
+</script>
+{% endblock %}

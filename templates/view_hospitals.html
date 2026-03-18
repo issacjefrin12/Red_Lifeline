@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}View Hospitals - Blood Bank Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-hospital"></i>
+            Manage Hospitals
+        </div>
+        <a href="/add-hospital" class="btn btn-primary">
+            <i class="fas fa-hospital"></i> Add New Hospital
+        </a>
+    </div>
+
+    <!-- Hospitals Table -->
+    <div class="card" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border: none;">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hospital Name</th>
+                            <th>Contact</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                            <th>Added Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if hospitals %}
+                        {% for hospital in hospitals %}
+                        <tr>
+                            <td><strong>#{{ hospital.id }}</strong></td>
+                            <td>
+                                <strong>{{ hospital.name }}</strong>
+                            </td>
+                            <td>
+                                <i class="fas fa-phone"></i> {{ hospital.contact }}
+                            </td>
+                            <td>
+                                {% if hospital.email %}
+                                <a href="mailto:{{ hospital.email }}">{{ hospital.email }}</a>
+                                {% else %}
+                                <small class="text-muted">-</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ hospital.address }}</small>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ hospital.created_at if hospital.created_at else 'N/A'
+                                    }}</small>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox"></i> No hospitals found
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

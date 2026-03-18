@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Red Lifeline{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dash-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .hero-card {
+        grid-column: span 12;
+        background: linear-gradient(135deg, #fff 0%, #fff5f6 55%, #ffecef 100%);
+        border: 1px solid #f5d7de;
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 16px;
+        align-items: center;
+    }
+
+    .hero-title {
+        font-family: "Fraunces", serif;
+        font-size: clamp(1.6rem, 3vw, 2.3rem);
+        margin-bottom: 8px;
+    }
+
+    .hero-desc {
+        color: var(--muted);
+        margin-bottom: 14px;
+        max-width: 66ch;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .hero-pill {
+        background: #fff;
+        border: 1px solid #f0d4dc;
+        border-radius: 14px;
+        padding: 10px 12px;
+        font-weight: 700;
+    }
+
+    .kpi {
+        background: #fff;
+        border: 1px solid #e7ecf2;
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        padding: 14px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .kpi:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px rgba(17, 31, 44, 0.12);
+    }
+
+    .kpi .kpi-label {
+        font-size: 0.8rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-weight: 700;
+    }
+
+    .kpi .kpi-val {
+        font-size: 1.9rem;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .kpi.warn .kpi-val {
+        color: var(--danger);
+    }
+
+    .span-3 {
+        grid-column: span 3;
+    }
+
+    .span-4 {
+        grid-column: span 4;
+    }
+
+    .span-5 {
+        grid-column: span 5;
+    }
+
+    .span-6 {
+        grid-column: span 6;
+    }
+
+    .span-7 {
+        grid-column: span 7;
+    }
+
+    .span-8 {
+        grid-column: span 8;
+    }
+
+    .span-12 {
+        grid-column: span 12;
+    }
+
+    .panel {
+        background: #fff;
+        border: 1px solid #e7ecf2;
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        padding: 16px;
+    }
+
+    .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .panel-title h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .low-stock-wrap {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .low-card {
+        border-radius: 12px;
+        border: 1px solid #f3d2d6;
+        background: linear-gradient(135deg, #fff, #ffeef1);
+        padding: 10px;
+    }
+
+    .low-card strong {
+        color: #8f1731;
+        font-size: 1.1rem;
+    }
+
+    .compat-output {
+        margin-top: 8px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .compat-chip {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        background: #f2f5f9;
+    }
+
+    .request-status {
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 4px 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .request-status.pending {
+        background: rgba(245, 158, 11, 0.17);
+        color: #7a4b00;
+    }
+
+    .request-status.approved {
+        background: rgba(21, 153, 71, 0.16);
+        color: #0d6b31;
+    }
+
+    .request-status.rejected {
+        background: rgba(220, 38, 38, 0.13);
+        color: #7f1d1d;
+    }
+
+    @media (max-width: 1080px) {
+        .span-3,
+        .span-4,
+        .span-5,
+        .span-6,
+        .span-7,
+        .span-8 {
+            grid-column: span 12;
+        }
+
+        .hero-card {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dash-grid">
+    <section class="hero-card">
+        <div>
+            <div class="hero-title">Donate Blood, Save Lives</div>
+            <p class="hero-desc">
+                Unified operations panel for donors, inventory, and requests.
+                Track shortages, monitor approvals, and respond faster to emergency needs.
+            </p>
+            <div class="hero-actions">
+                <a href="/add-donor" class="btn btn-primary"><i class="fas fa-user-plus"></i> Become a Donor</a>
+                <a href="/blood-request" class="btn btn-outline-primary"><i class="fas fa-kit-medical"></i> Request Blood</a>
+                <a href="/admin/dashboard" class="btn btn-outline-dark"><i class="fas fa-chart-pie"></i> Analytics</a>
+            </div>
+        </div>
+        <div>
+            <div class="hero-pill"><i class="fas fa-phone-volume me-2 text-danger"></i>Emergency: +91 1800-100-3323</div>
+            <div class="hero-pill mt-2"><i class="fas fa-hospital me-2 text-danger"></i>City Central Hospital Network</div>
+            <div class="hero-pill mt-2"><i class="fas fa-triangle-exclamation me-2 text-danger"></i>Live stock monitoring enabled</div>
+        </div>
+    </section>
+
+    <article class="kpi span-3">
+        <div class="kpi-label">Total Donors</div>
+        <div class="kpi-val">{{ total_donors }}</div>
+    </article>
+    <article class="kpi span-3">
+        <div class="kpi-label">Total Units</div>
+        <div class="kpi-val">{{ total_units }}</div>
+    </article>
+    <article class="kpi span-3">
+        <div class="kpi-label">Pending Requests</div>
+        <div class="kpi-val">{{ pending_requests }}</div>
+    </article>
+    <article class="kpi warn span-3">
+        <div class="kpi-label">Low/Out of Stock</div>
+        <div class="kpi-val">{{ out_of_stock }}</div>
+    </article>
+
+    <section class="panel span-8">
+        <div class="panel-title">
+            <h5><i class="fas fa-chart-column me-2 text-danger"></i>Monthly Donations</h5>
+        </div>
+        <canvas id="donationsChart" height="130"></canvas>
+    </section>
+
+    <section class="panel span-4">
+        <div class="panel-title">
+            <h5><i class="fas fa-chart-pie me-2 text-danger"></i>Blood Group Distribution</h5>
+        </div>
+        <canvas id="groupChart" height="160"></canvas>
+    </section>
+
+    <section class="panel span-7">
+        <div class="panel-title">
+            <h5><i class="fas fa-list-check me-2 text-danger"></i>Recent Requests</h5>
+            <a href="/requests" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Hospital</th>
+                        <th>Group</th>
+                        <th>Units</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_requests %}
+                        {% for req in recent_requests[:8] %}
+                        <tr>
+                            <td>{{ req.hospital_name or 'Unknown' }}</td>
+                            <td><span class="badge bg-danger-subtle text-danger-emphasis">{{ req.blood_group }}</span></td>
+                            <td>{{ req.units_required }}</td>
+                            <td>
+                                {% if req.status == 'Approved' %}
+                                    <span class="request-status approved"><i class="fas fa-circle"></i>Approved</span>
+                                {% elif req.status == 'Rejected' %}
+                                    <span class="request-status rejected"><i class="fas fa-circle"></i>Rejected</span>
+                                {% else %}
+                                    <span class="request-status pending"><i class="fas fa-circle"></i>Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No requests available.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel span-5">
+        <div class="panel-title">
+            <h5><i class="fas fa-triangle-exclamation me-2 text-danger"></i>Low Stock Warning</h5>
+        </div>
+        <div class="low-stock-wrap">
+            {% set lows = inventory | selectattr('quantity_units', 'lt', 10) | list %}
+            {% if lows %}
+                {% for item in lows[:6] %}
+                <div class="low-card">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <strong>{{ item.blood_group }}</strong>
+                        <i class="fas fa-droplet text-danger"></i>
+                    </div>
+                    <div class="text-muted small">{{ item.quantity_units }} units left</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-muted">No critical stock group currently.</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="panel span-6">
+        <div class="panel-title">
+            <h5><i class="fas fa-shuffle me-2 text-danger"></i>Blood Compatibility Helper</h5>
+        </div>
+        <label class="form-label fw-semibold">Patient Blood Group</label>
+        <select id="compatibilitySelect" class="form-select">
+            {% for bg in ['O+','O-','A+','A-','B+','B-','AB+','AB-'] %}
+            <option value="{{ bg }}">{{ bg }}</option>
+            {% endfor %}
+        </select>
+        <div class="compat-output" id="compatibilityOutput"></div>
+    </section>
+
+    <section class="panel span-6">
+        <div class="panel-title">
+            <h5><i class="fas fa-chart-simple me-2 text-danger"></i>Request vs Approval Rate</h5>
+        </div>
+        <canvas id="requestStatusChart" height="140"></canvas>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const monthlyData = {{ monthly_donations | tojson }};
+        const inventoryData = {{ inventory | tojson }};
+        const requestData = {{ recent_requests | tojson }};
+
+        const compatMap = {
+            "O-": ["O-"],
+            "O+": ["O+", "O-"],
+            "A-": ["A-", "O-"],
+            "A+": ["A+", "A-", "O+", "O-"],
+            "B-": ["B-", "O-"],
+            "B+": ["B+", "B-", "O+", "O-"],
+            "AB-": ["AB-", "A-", "B-", "O-"],
+            "AB+": ["AB+", "AB-", "A+", "A-", "B+", "B-", "O+", "O-"]
+        };
+
+        const compatSelect = document.getElementById("compatibilitySelect");
+        const compatOutput = document.getElementById("compatibilityOutput");
+
+        function renderCompatibility() {
+            const selected = compatSelect.value;
+            const groups = compatMap[selected] || [];
+            compatOutput.innerHTML = groups.map((g) => `<span class="compat-chip"><i class="fas fa-check text-success me-1"></i>${g}</span>`).join("");
+        }
+
+        compatSelect.addEventListener("change", renderCompatibility);
+        renderCompatibility();
+
+        const donationCtx = document.getElementById("donationsChart");
+        if (donationCtx) {
+            new Chart(donationCtx, {
+                type: "bar",
+                data: {
+                    labels: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+                    datasets: [{
+                        label: "Donations",
+                        data: monthlyData,
+                        borderRadius: 10,
+                        backgroundColor: "#c61d3a"
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: "#eef2f7" } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const groupCtx = document.getElementById("groupChart");
+        if (groupCtx) {
+            const labels = inventoryData.map((item) => item.blood_group);
+            const values = inventoryData.map((item) => Number(item.quantity_units || 0));
+            new Chart(groupCtx, {
+                type: "doughnut",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ["#c61d3a","#f97316","#0ea5e9","#8b5cf6","#22c55e","#ef4444","#a855f7","#14b8a6"]
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: { boxWidth: 10, usePointStyle: true }
+                        }
+                    }
+                }
+            });
+        }
+
+        const requestCtx = document.getElementById("requestStatusChart");
+        if (requestCtx) {
+            const counts = { Pending: 0, Approved: 0, Rejected: 0 };
+            requestData.forEach((r) => {
+                if (r.status === "Approved") counts.Approved += 1;
+                else if (r.status === "Rejected") counts.Rejected += 1;
+                else counts.Pending += 1;
+            });
+
+            new Chart(requestCtx, {
+                type: "bar",
+                data: {
+                    labels: ["Pending", "Approved", "Rejected"],
+                    datasets: [{
+                        data: [counts.Pending, counts.Approved, counts.Rejected],
+                        backgroundColor: ["#f59e0b", "#16a34a", "#dc2626"],
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    indexAxis: "y",
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: "#eef2f7" } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

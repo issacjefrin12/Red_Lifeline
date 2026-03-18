@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Request Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <h1 class="h4 mb-1">Request #{{ request_item.id }}</h1>
+            <div class="text-muted">Hospital request detail and status.</div>
+        </div>
+        <a class="btn btn-outline-secondary" href="{{ url_for('user_mgmt.dashboard') }}">Back to Dashboard</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white border-0">
+            <h5 class="mb-0">Request Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="text-muted small">Blood Group</div>
+                    <div class="fw-semibold">{{ request_item.blood_group }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Units Requested</div>
+                    <div class="fw-semibold">{{ request_item.units_required }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Urgency</div>
+                    <div class="fw-semibold">{{ request_item.urgency or 'Normal' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Request Date</div>
+                    <div class="fw-semibold">{{ request_item.request_date|strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Status</div>
+                    <div class="fw-semibold">{{ request_item.status }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Approval Date</div>
+                    <div class="fw-semibold">
+                        {% if request_item.approval_date %}
+                            {{ request_item.approval_date|strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted small">Rejection Reason</div>
+                    <div class="fw-semibold">{{ request_item.rejection_reason or '-' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if request_item.status == 'Pending' %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-white border-0">
+            <h5 class="mb-0">Edit Pending Request</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="/hospital/requests/{{ request_item.id }}/edit">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" for="bloodGroup">Blood Group</label>
+                        <select class="form-select" id="bloodGroup" name="blood_group" required>
+                            {% for group in ['O+','O-','A+','A-','B+','B-','AB+','AB-'] %}
+                                <option value="{{ group }}" {% if request_item.blood_group == group %}selected{% endif %}>{{ group }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="unitsRequired">Units Required</label>
+                        <input type="number" class="form-control" id="unitsRequired" name="units_required" min="1" max="50" value="{{ request_item.units_required }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="urgency">Urgency</label>
+                        <select class="form-select" id="urgency" name="urgency" required>
+                        {% set urgency_value = request_item.urgency or 'Normal' %}
+                            <option value="Normal" {% if urgency_value == 'Normal' %}selected{% endif %}>Normal</option>
+                            <option value="Emergency" {% if urgency_value == 'Emergency' %}selected{% endif %}>Emergency</option>
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary" type="submit">Save Changes</button>
+                    </div>
+                </div>
+            </form>
+            <form method="post" action="/hospital/requests/{{ request_item.id }}/cancel" class="mt-3" onsubmit="return confirm('Cancel this request?');">
+                <button class="btn btn-outline-danger" type="submit">Cancel Request</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

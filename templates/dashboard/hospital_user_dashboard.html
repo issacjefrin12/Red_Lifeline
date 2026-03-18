@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Hospital User Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h1 class="h3 mb-1">Hospital Requests</h1>
+            <div class="text-muted">
+                {{ data.hospital_info.name if data.hospital_info else 'Hospital' }}
+            </div>
+        </div>
+        <a class="btn btn-outline-secondary" href="{{ url_for('make_request') }}">Full Request Page</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">My Pending Requests</div>
+                    <div class="display-6 fw-bold">{{ data.summary.pending_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">My Approved Requests</div>
+                    <div class="display-6 fw-bold text-success">{{ data.summary.approved_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">My Rejected Requests</div>
+                    <div class="display-6 fw-bold text-danger">{{ data.summary.rejected_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Units Requested (This Month)</div>
+                    <div class="display-6 fw-bold">{{ data.summary.units_requested_month }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Blood Availability Status</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Blood Group</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data.availability %}
+                                <tr>
+                                    <td class="fw-semibold">{{ item.blood_group }}</td>
+                                    <td>
+                                        <span class="badge {{ item.status_class }}">{{ item.status_label }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% if not data.availability %}
+                                <tr>
+                                    <td colspan="2" class="text-muted text-center py-3">No availability data.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Create New Request</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/hospital/requests/create">
+                        <div class="mb-3">
+                            <label class="form-label" for="bloodGroup">Blood Group</label>
+                            <select class="form-select" id="bloodGroup" name="blood_group" required>
+                                <option value="">Select blood group</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="unitsRequired">Units Required</label>
+                            <input type="number" class="form-control" id="unitsRequired" name="units_required" min="1" max="50" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="urgency">Urgency Level</label>
+                            <select class="form-select" id="urgency" name="urgency" required>
+                                <option value="Normal">Normal</option>
+                                <option value="Emergency">Emergency</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary w-100" type="submit">Submit Request</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Blood Compatibility Helper</h5>
+                </div>
+                <div class="card-body">
+                    <label class="form-label">Patient Blood Group</label>
+                    <select class="form-select mb-2" id="hospitalCompatibilitySelect">
+                        {% for bg in ['O+','O-','A+','A-','B+','B-','AB+','AB-'] %}
+                        <option value="{{ bg }}">{{ bg }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="text-muted small mb-2">Compatible donors:</div>
+                    <div id="hospitalCompatibilityOutput" class="d-flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white border-0">
+            <h5 class="mb-0">My Requests</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if data.my_requests %}
+                            {% for request in data.my_requests %}
+                                {% set is_cancelled = request.status == 'Rejected' and request.rejection_reason and 'Cancelled by hospital' in request.rejection_reason %}
+                                <tr>
+                                    <td>#{{ request.id }}</td>
+                                    <td><span class="badge bg-primary">{{ request.blood_group }}</span></td>
+                                    <td>{{ request.units_required }}</td>
+                                    <td>
+                                        {% if is_cancelled %}
+                                            <span class="badge bg-secondary">Cancelled</span>
+                                        {% elif request.status == 'Pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif request.status == 'Approved' %}
+                                            <span class="badge bg-success">Approved</span>
+                                        {% elif request.status == 'Rejected' %}
+                                            <span class="badge bg-danger">Rejected</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ request.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ request.request_date|strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td class="text-end">
+                                        <div class="d-flex flex-wrap justify-content-end gap-2">
+                                            <a class="btn btn-sm btn-outline-primary" href="/hospital/requests/{{ request.id }}">View</a>
+                                            {% if request.status == 'Pending' %}
+                                                <a class="btn btn-sm btn-outline-secondary" href="/hospital/requests/{{ request.id }}">Edit</a>
+                                                <form method="post" action="/hospital/requests/{{ request.id }}/cancel" onsubmit="return confirm('Cancel this request?');">
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No requests yet.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<style>
+    .display-6 {
+        font-size: 1.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const map = {
+        'O-': ['O-'],
+        'O+': ['O+', 'O-'],
+        'A-': ['A-', 'O-'],
+        'A+': ['A+', 'A-', 'O+', 'O-'],
+        'B-': ['B-', 'O-'],
+        'B+': ['B+', 'B-', 'O+', 'O-'],
+        'AB-': ['AB-', 'A-', 'B-', 'O-'],
+        'AB+': ['AB+', 'AB-', 'A+', 'A-', 'B+', 'B-', 'O+', 'O-']
+    };
+
+    const select = document.getElementById('hospitalCompatibilitySelect');
+    const output = document.getElementById('hospitalCompatibilityOutput');
+    if (!select || !output) return;
+
+    function renderCompatibleGroups() {
+        const value = select.value;
+        const groups = map[value] || [];
+        output.innerHTML = groups.map((group) => `<span class="badge bg-light text-dark border">${group}</span>`).join('');
+    }
+
+    select.addEventListener('change', renderCompatibleGroups);
+    renderCompatibleGroups();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics & Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-7 { grid-column: span 7; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+
+    .metric {
+        background: #fff;
+        border: 1px solid #e7ecf3;
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        padding: 14px;
+    }
+
+    .metric-label {
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+    }
+
+    .metric-val {
+        font-size: 1.9rem;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .panel {
+        background: #fff;
+        border: 1px solid #e7ecf3;
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        padding: 16px;
+    }
+
+    .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .panel-head h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .low-item {
+        border-radius: 10px;
+        border: 1px solid #f4cfd8;
+        background: #fff3f5;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .request-actions {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    @media (max-width: 1080px) {
+        .span-3,
+        .span-4,
+        .span-5,
+        .span-6,
+        .span-7,
+        .span-8 {
+            grid-column: span 12;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title"><i class="fas fa-chart-line"></i> Analytics & Reports</div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary btn-sm" href="/donations">Donation History</a>
+        <a class="btn btn-outline-primary btn-sm" href="/audit-logs">Audit Logs</a>
+    </div>
+</div>
+
+{% if dashboard_data.error %}
+<div class="alert alert-warning">{{ dashboard_data.error }}</div>
+{% else %}
+<div class="admin-grid">
+    <section class="metric span-3">
+        <div class="metric-label">Total Units Available</div>
+        <div class="metric-val">{{ dashboard_data.summary.total_units }}</div>
+    </section>
+    <section class="metric span-3">
+        <div class="metric-label">Pending Requests</div>
+        <div class="metric-val">{{ dashboard_data.summary.pending_requests_count }}</div>
+    </section>
+    <section class="metric span-3">
+        <div class="metric-label">Today's Donations</div>
+        <div class="metric-val">{{ dashboard_data.summary.today_donations }}</div>
+        <small class="text-muted">{{ dashboard_data.summary.today_units }} units collected</small>
+    </section>
+    <section class="metric span-3">
+        <div class="metric-label">Critical Alerts</div>
+        <div class="metric-val text-danger">{{ dashboard_data.summary.critical_alerts_count }}</div>
+    </section>
+
+    <section class="panel span-8">
+        <div class="panel-head">
+            <h5><i class="fas fa-chart-column me-2 text-danger"></i>Monthly Donations</h5>
+        </div>
+        <canvas id="adminMonthlyChart" height="120"></canvas>
+    </section>
+    <section class="panel span-4">
+        <div class="panel-head">
+            <h5><i class="fas fa-chart-pie me-2 text-danger"></i>Blood Group Distribution</h5>
+        </div>
+        <canvas id="adminGroupChart" height="140"></canvas>
+    </section>
+
+    <section class="panel span-6">
+        <div class="panel-head">
+            <h5><i class="fas fa-list-check me-2 text-danger"></i>Request vs Approval Rate</h5>
+        </div>
+        <canvas id="requestRateChart" height="110"></canvas>
+    </section>
+
+    <section class="panel span-6">
+        <div class="panel-head">
+            <h5><i class="fas fa-triangle-exclamation me-2 text-danger"></i>Low Stock Alerts</h5>
+        </div>
+        {% if dashboard_data.critical_alerts %}
+            {% for item in dashboard_data.critical_alerts %}
+            <div class="low-item">
+                <span><i class="fas fa-droplet text-danger me-2"></i>{{ item.blood_group }}</span>
+                <span>{{ item.quantity_units }} units left</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-muted">No critical shortage at this moment.</div>
+        {% endif %}
+    </section>
+
+    <section class="panel span-7">
+        <div class="panel-head">
+            <h5><i class="fas fa-hourglass-half me-2 text-danger"></i>Pending Requests</h5>
+        </div>
+        <div class="table-responsive" style="max-height: 420px;">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Hospital</th>
+                        <th>Group</th>
+                        <th>Units</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if dashboard_data.pending_requests %}
+                        {% for req in dashboard_data.pending_requests %}
+                        <tr>
+                            <td>#{{ req.id }}</td>
+                            <td>{{ req.hospital_name or 'Unknown' }}</td>
+                            <td><span class="badge bg-danger-subtle text-danger-emphasis">{{ req.blood_group }}</span></td>
+                            <td>{{ req.units_required }}</td>
+                            <td>{{ req.request_date|strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <div class="request-actions">
+                                    <button class="btn btn-success btn-sm" onclick="approveRequest({{ req.id }})">Approve</button>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="rejectRequest({{ req.id }})">Reject</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">No pending requests.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel span-5">
+        <div class="panel-head">
+            <h5><i class="fas fa-clock-rotate-left me-2 text-danger"></i>Recent Donations</h5>
+        </div>
+        <div class="table-responsive" style="max-height: 220px;">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Donor</th>
+                        <th>Group</th>
+                        <th>Units</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if dashboard_data.recent_donations %}
+                        {% for donation in dashboard_data.recent_donations %}
+                        <tr>
+                            <td>{{ donation.donor_name or 'Unknown' }}</td>
+                            <td><span class="badge bg-danger-subtle text-danger-emphasis">{{ donation.blood_group }}</span></td>
+                            <td>{{ donation.units }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">No donation records.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function approveRequest(requestId) {
+        fetch(`/api/requests/${requestId}/approve`, { method: "POST" })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) window.location.reload();
+                else alert(data.message || "Approval failed");
+            })
+            .catch(() => alert("Approval failed"));
+    }
+
+    function rejectRequest(requestId) {
+        fetch(`/api/requests/${requestId}/reject`, { method: "POST" })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) window.location.reload();
+                else alert(data.message || "Rejection failed");
+            })
+            .catch(() => alert("Rejection failed"));
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const analytics = {{ dashboard_data.analytics | default({}, true) | tojson }};
+        const monthly = analytics.monthly_donations || [];
+        const groupData = analytics.blood_group_distribution || [];
+        const requestStatus = analytics.request_status || { pending: 0, approved: 0, rejected: 0 };
+
+        const monthCtx = document.getElementById("adminMonthlyChart");
+        if (monthCtx) {
+            new Chart(monthCtx, {
+                type: "bar",
+                data: {
+                    labels: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+                    datasets: [{
+                        data: monthly,
+                        borderRadius: 10,
+                        backgroundColor: "#c61d3a"
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: "#edf1f7" } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const groupCtx = document.getElementById("adminGroupChart");
+        if (groupCtx) {
+            new Chart(groupCtx, {
+                type: "doughnut",
+                data: {
+                    labels: groupData.map((x) => x.blood_group),
+                    datasets: [{
+                        data: groupData.map((x) => Number(x.units || 0)),
+                        backgroundColor: ["#c61d3a","#f97316","#0ea5e9","#8b5cf6","#16a34a","#ef4444","#14b8a6","#a855f7"]
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: { boxWidth: 10, usePointStyle: true }
+                        }
+                    }
+                }
+            });
+        }
+
+        const requestCtx = document.getElementById("requestRateChart");
+        if (requestCtx) {
+            new Chart(requestCtx, {
+                type: "bar",
+                data: {
+                    labels: ["Pending", "Approved", "Rejected"],
+                    datasets: [{
+                        data: [requestStatus.pending, requestStatus.approved, requestStatus.rejected],
+                        backgroundColor: ["#f59e0b", "#16a34a", "#dc2626"],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: "y",
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: "#edf1f7" } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

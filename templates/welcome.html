@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Lifeline | Donate Blood, Save Lives</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f5f6f8;
+            --paper: #ffffff;
+            --ink: #182230;
+            --muted: #5f6b7a;
+            --brand: #bd1f36;
+            --brand-dark: #951628;
+            --teal: #0f766e;
+            --warn: #f59e0b;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --radius: 18px;
+            --shadow: 0 10px 30px rgba(24, 34, 48, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Outfit", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 0% 0%, rgba(189, 31, 54, 0.16), transparent 44%),
+                radial-gradient(circle at 100% 0%, rgba(15, 118, 110, 0.12), transparent 38%),
+                linear-gradient(180deg, #fbfbfc 0%, #f2f4f7 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            width: min(1160px, 92vw);
+            margin: 0 auto;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.78);
+            border-bottom: 1px solid rgba(24, 34, 48, 0.08);
+        }
+
+        .topbar-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            gap: 16px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            text-decoration: none;
+            color: var(--ink);
+        }
+
+        .brand img {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+        }
+
+        .brand span {
+            letter-spacing: 0.4px;
+        }
+
+        .brand em {
+            color: var(--brand);
+            font-style: normal;
+        }
+
+        .top-links {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .top-links a {
+            text-decoration: none;
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 8px 12px;
+            border-radius: 999px;
+            transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .top-links a:hover {
+            transform: translateY(-1px);
+            background: #eceff4;
+            color: var(--ink);
+        }
+
+        .btn {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+            color: #fff;
+            box-shadow: 0 10px 20px rgba(189, 31, 54, 0.28);
+        }
+
+        .btn-secondary {
+            background: var(--paper);
+            border: 1px solid rgba(24, 34, 48, 0.16);
+            color: var(--ink);
+        }
+
+        .hero {
+            padding: 64px 0 40px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(189, 31, 54, 0.1);
+            color: var(--brand-dark);
+            border-radius: 999px;
+            padding: 7px 13px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            font-size: 0.86rem;
+        }
+
+        .hero h1 {
+            font-family: "Fraunces", serif;
+            font-size: clamp(2.2rem, 4.2vw, 4rem);
+            line-height: 1.04;
+            margin-bottom: 16px;
+        }
+
+        .hero p {
+            color: var(--muted);
+            font-size: 1.04rem;
+            max-width: 62ch;
+            margin-bottom: 22px;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .hero-panel {
+            background: var(--paper);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(24, 34, 48, 0.08);
+            padding: 24px;
+        }
+
+        .warning {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+            font-weight: 700;
+            color: var(--danger);
+            background: rgba(220, 38, 38, 0.08);
+            border: 1px solid rgba(220, 38, 38, 0.18);
+            border-radius: 12px;
+            padding: 11px 12px;
+        }
+
+        .mini-stats {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .mini-card {
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            padding: 12px;
+        }
+
+        .mini-card .k {
+            font-weight: 800;
+            font-size: 1.2rem;
+        }
+
+        .mini-card .l {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        section {
+            padding: 24px 0;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        .section-title h2 {
+            font-size: clamp(1.4rem, 2.4vw, 2rem);
+            font-family: "Fraunces", serif;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .feature {
+            background: var(--paper);
+            border: 1px solid rgba(24, 34, 48, 0.08);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 18px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 30px rgba(24, 34, 48, 0.12);
+        }
+
+        .feature i {
+            color: var(--brand);
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .feature h3 {
+            margin-bottom: 8px;
+            font-size: 1.05rem;
+        }
+
+        .feature p {
+            color: var(--muted);
+            font-size: 0.93rem;
+        }
+
+        .compat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .panel {
+            background: var(--paper);
+            border: 1px solid rgba(24, 34, 48, 0.08);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 18px;
+        }
+
+        .compat-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .compat-table th,
+        .compat-table td {
+            border-bottom: 1px solid #eceff3;
+            text-align: left;
+            padding: 8px 4px;
+        }
+
+        .compat-table th {
+            color: var(--muted);
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: #f3f4f6;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin: 2px 3px 2px 0;
+        }
+
+        .chip i {
+            color: var(--brand);
+            font-size: 0.74rem;
+        }
+
+        .status-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            padding: 6px 11px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .status.approved {
+            color: #0f5132;
+            background: rgba(22, 163, 74, 0.14);
+            border-color: rgba(22, 163, 74, 0.32);
+        }
+
+        .status.pending {
+            color: #78350f;
+            background: rgba(245, 158, 11, 0.16);
+            border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        .status.rejected {
+            color: #7f1d1d;
+            background: rgba(220, 38, 38, 0.14);
+            border-color: rgba(220, 38, 38, 0.32);
+        }
+
+        .analytics-bars {
+            display: grid;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .bar-row {
+            display: grid;
+            grid-template-columns: 42px 1fr 36px;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .bar-track {
+            height: 12px;
+            border-radius: 999px;
+            background: #edf0f5;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--brand), #ee4e65);
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .contact-card h3 {
+            margin-bottom: 8px;
+        }
+
+        .contact-card p {
+            color: var(--muted);
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .contact-card a {
+            color: var(--brand-dark);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .mobile-mock {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .phone {
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            background: #fbfbfd;
+            padding: 12px;
+        }
+
+        .phone h4 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .phone ul {
+            list-style: none;
+            display: grid;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+
+        footer {
+            margin-top: 22px;
+            padding: 24px 0 34px;
+            border-top: 1px solid rgba(24, 34, 48, 0.1);
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 980px) {
+            .hero-grid,
+            .feature-grid,
+            .compat-grid,
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .top-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="container topbar-inner">
+            <a class="brand" href="/welcome">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Red Lifeline logo">
+                <span><em>Red</em> Lifeline</span>
+            </a>
+            <nav class="top-links">
+                <a href="#why">Why Donate</a>
+                <a href="#compatibility">Compatibility</a>
+                <a href="#emergency">Emergency</a>
+            </nav>
+            <a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Login</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container hero-grid">
+                <div>
+                    <div class="eyebrow"><i class="fas fa-droplet"></i> Community Blood Network</div>
+                    <h1>Donate Blood, Save Lives</h1>
+                    <p>
+                        Connect donors, hospitals, and emergency teams with a modern blood bank platform.
+                        Register donors faster, track stock in real time, and respond to urgent requests.
+                    </p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="/login"><i class="fas fa-user-plus"></i> Become a Donor</a>
+                        <a class="btn btn-secondary" href="/login"><i class="fas fa-kit-medical"></i> Request Blood</a>
+                    </div>
+                </div>
+
+                <div class="hero-panel">
+                    <h3>Live Operations Snapshot</h3>
+                    <p style="color: var(--muted); margin-top: 6px;">Daily system overview for your blood bank team.</p>
+                    <div class="mini-stats">
+                        <div class="mini-card">
+                            <div class="k">183</div>
+                            <div class="l">Active Donors</div>
+                        </div>
+                        <div class="mini-card">
+                            <div class="k">64</div>
+                            <div class="l">Units This Week</div>
+                        </div>
+                        <div class="mini-card">
+                            <div class="k">27</div>
+                            <div class="l">Pending Requests</div>
+                        </div>
+                        <div class="mini-card">
+                            <div class="k">96%</div>
+                            <div class="l">Fulfillment Rate</div>
+                        </div>
+                    </div>
+                    <div class="warning">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        O- blood is critically low
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="why">
+            <div class="container">
+                <div class="section-title">
+                    <h2>Why Donate Blood?</h2>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature">
+                        <i class="fas fa-heart-circle-check"></i>
+                        <h3>Save Lives Instantly</h3>
+                        <p>One donation can support trauma care, surgeries, and emergency treatments for multiple patients.</p>
+                    </article>
+                    <article class="feature">
+                        <i class="fas fa-user-shield"></i>
+                        <h3>Health Screening Benefit</h3>
+                        <p>Each donation includes a quick medical checkup and helps you stay aware of your own health.</p>
+                    </article>
+                    <article class="feature">
+                        <i class="fas fa-people-group"></i>
+                        <h3>Strengthen Community Care</h3>
+                        <p>Consistent donors keep local hospitals prepared and reduce critical shortages during emergencies.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="compatibility">
+            <div class="container">
+                <div class="section-title">
+                    <h2>Blood Compatibility Chart + Helper</h2>
+                </div>
+                <div class="compat-grid">
+                    <div class="panel">
+                        <table class="compat-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Compatible Donors</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>O-</td><td>O-</td></tr>
+                                <tr><td>O+</td><td>O+, O-</td></tr>
+                                <tr><td>A-</td><td>A-, O-</td></tr>
+                                <tr><td>A+</td><td>A+, A-, O+, O-</td></tr>
+                                <tr><td>B-</td><td>B-, O-</td></tr>
+                                <tr><td>B+</td><td>B+, B-, O+, O-</td></tr>
+                                <tr><td>AB-</td><td>AB-, A-, B-, O-</td></tr>
+                                <tr><td>AB+</td><td>All blood groups</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="panel">
+                        <h3>Compatibility Helper</h3>
+                        <p style="color: var(--muted); margin: 8px 0 12px;">Select patient blood group:</p>
+                        <select id="patientGroup" class="btn btn-secondary" style="width: 100%; justify-content: space-between;">
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                        <div style="margin-top: 12px; font-weight: 700;">Compatible Donors:</div>
+                        <div id="compatibilityOutput" style="margin-top: 8px;"></div>
+
+                        <div class="status-row">
+                            <span class="status approved"><i class="fas fa-circle"></i> Approved</span>
+                            <span class="status pending"><i class="fas fa-circle"></i> Pending</span>
+                            <span class="status rejected"><i class="fas fa-circle"></i> Rejected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="container contact-grid">
+                <div class="panel">
+                    <h3>Analytics Preview</h3>
+                    <p style="color: var(--muted);">Monthly donations and blood group distribution at a glance.</p>
+                    <div class="analytics-bars">
+                        <div class="bar-row"><span>A+</span><div class="bar-track"><div class="bar" style="width: 68%;"></div></div><span>68</span></div>
+                        <div class="bar-row"><span>B+</span><div class="bar-track"><div class="bar" style="width: 52%;"></div></div><span>52</span></div>
+                        <div class="bar-row"><span>O+</span><div class="bar-track"><div class="bar" style="width: 86%;"></div></div><span>86</span></div>
+                        <div class="bar-row"><span>AB+</span><div class="bar-track"><div class="bar" style="width: 22%;"></div></div><span>22</span></div>
+                    </div>
+                </div>
+                <div class="panel contact-card" id="emergency">
+                    <h3>Emergency Contact</h3>
+                    <p><i class="fas fa-phone-volume"></i> 24/7 Helpline: <a href="tel:+9118001003323">+91 1800-100-3323</a></p>
+                    <p><i class="fas fa-hospital"></i> City Central Hospital Blood Unit</p>
+                    <p><i class="fas fa-location-dot"></i> MG Road, Bengaluru, Karnataka</p>
+                    <div class="mobile-mock">
+                        <div class="phone">
+                            <h4>Find Blood</h4>
+                            <ul>
+                                <li><i class="fas fa-droplet"></i> Find blood</li>
+                                <li><i class="fas fa-user-plus"></i> Register donor</li>
+                            </ul>
+                        </div>
+                        <div class="phone">
+                            <h4>Emergency</h4>
+                            <ul>
+                                <li><i class="fas fa-ambulance"></i> Emergency request</li>
+                                <li><i class="fas fa-map-marker-alt"></i> Nearby donors</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div>Red Lifeline Blood Bank Management System</div>
+            <div>City Central Hospital Network | Emergency Department & Transfusion Unit</div>
+        </div>
+    </footer>
+
+    <script>
+        const compatibilityMap = {
+            "O-": ["O-"],
+            "O+": ["O+", "O-"],
+            "A-": ["A-", "O-"],
+            "A+": ["A+", "A-", "O+", "O-"],
+            "B-": ["B-", "O-"],
+            "B+": ["B+", "B-", "O+", "O-"],
+            "AB-": ["AB-", "A-", "B-", "O-"],
+            "AB+": ["AB+", "AB-", "A+", "A-", "B+", "B-", "O+", "O-"]
+        };
+
+        function renderCompatibility() {
+            const group = document.getElementById("patientGroup").value;
+            const output = document.getElementById("compatibilityOutput");
+            const donors = compatibilityMap[group] || [];
+            output.innerHTML = donors
+                .map((value) => `<span class="chip"><i class="fas fa-check"></i>${value}</span>`)
+                .join("");
+        }
+
+        document.getElementById("patientGroup").addEventListener("change", renderCompatibility);
+        renderCompatibility();
+    </script>
+</body>
+</html>

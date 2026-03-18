@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Blood Bank Management System{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #f3f6fb;
+            --surface: #ffffff;
+            --ink: #162333;
+            --muted: #607184;
+            --line: #e5ebf4;
+            --brand: #c81c3a;
+            --brand-dark: #9e132c;
+            --radius: 16px;
+            --shadow: 0 12px 30px rgba(12, 28, 44, 0.1);
+            --sidebar-width: 270px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Outfit", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 0% 0%, rgba(200, 28, 58, 0.08), transparent 34%),
+                radial-gradient(circle at 100% 0%, rgba(22, 35, 51, 0.08), transparent 30%),
+                linear-gradient(180deg, #f9fbff 0%, var(--bg) 100%);
+            min-height: 100vh;
+        }
+
+        .app-shell {
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #121d2d 0%, #17253a 60%, #111b2b 100%);
+            color: #dce6f5;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 20;
+        }
+
+        .sidebar-head {
+            padding: 18px 16px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .brand img {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .brand em {
+            color: #ff7b90;
+            font-style: normal;
+        }
+
+        .sidebar-close {
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: #fff;
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+        }
+
+        .sidebar-nav {
+            padding: 12px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .nav-item-side {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            color: #d8e4f7;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 6px;
+            transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+        }
+
+        .nav-item-side:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(2px);
+        }
+
+        .nav-item-side.active {
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+            box-shadow: 0 10px 18px rgba(200, 28, 58, 0.35);
+        }
+
+        .nav-section {
+            margin: 12px 8px 6px;
+            color: #aebed4;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.9px;
+            font-weight: 700;
+        }
+
+        .submenu {
+            margin: 0 0 10px 36px;
+            display: grid;
+            gap: 5px;
+        }
+
+        .submenu a {
+            color: #afc0d8;
+            text-decoration: none;
+            font-size: 0.84rem;
+            padding: 4px 0;
+            border-left: 2px solid transparent;
+            padding-left: 8px;
+        }
+
+        .submenu a:hover {
+            color: #fff;
+            border-left-color: #ff7b90;
+        }
+
+        .submenu a.active {
+            color: #fff;
+            border-left-color: #ff7b90;
+            font-weight: 700;
+        }
+
+        .sidebar-foot {
+            padding: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .user-box {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+            flex-shrink: 0;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .user-role {
+            font-size: 0.74rem;
+            color: #a9bad1;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .foot-actions {
+            display: grid;
+            gap: 6px;
+        }
+
+        .foot-actions a {
+            text-decoration: none;
+            color: #d8e4f7;
+            font-size: 0.86rem;
+            border-radius: 9px;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .foot-actions a:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .app-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .topbar {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 18px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.84);
+            backdrop-filter: blur(8px);
+            position: sticky;
+            top: 0;
+            z-index: 15;
+        }
+
+        .topbar-title {
+            font-family: "Fraunces", serif;
+            font-size: 1.05rem;
+            color: var(--ink);
+        }
+
+        .menu-toggle {
+            display: none;
+            border: 1px solid #d6deea;
+            background: #fff;
+            border-radius: 10px;
+            width: 38px;
+            height: 38px;
+            color: var(--ink);
+        }
+
+        .topbar-right a {
+            text-decoration: none;
+            font-weight: 700;
+            color: var(--brand);
+            border: 1px solid #efc5cd;
+            border-radius: 10px;
+            padding: 7px 11px;
+            background: #fff;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px 18px;
+        }
+
+        .page-header {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.34rem;
+            font-family: "Fraunces", serif;
+        }
+
+        .card,
+        .content-card {
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header-custom,
+        .card-header {
+            border-bottom: 1px solid #e8edf5 !important;
+            background: linear-gradient(180deg, #fff, #f9fbff) !important;
+            color: var(--ink);
+            font-weight: 700;
+        }
+
+        .table thead th {
+            background: #f7f9fc;
+            border-bottom: 1px solid #e8edf5;
+            color: #56657a;
+            font-size: 0.8rem;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fbff;
+        }
+
+        .status-badge,
+        .badge-approved,
+        .badge-pending,
+        .badge-rejected {
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .status-badge.approved,
+        .badge-approved {
+            background: rgba(21, 153, 71, 0.15);
+            color: #0d6b31;
+        }
+
+        .status-badge.pending,
+        .badge-pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: #7a4b00;
+        }
+
+        .status-badge.rejected,
+        .badge-rejected {
+            background: rgba(220, 38, 38, 0.14);
+            color: #7f1d1d;
+        }
+
+        .action-button,
+        .btn-primary {
+            background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            border-radius: 12px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .action-button:hover,
+        .btn-primary:hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 10px 18px rgba(200, 28, 58, 0.26);
+        }
+
+        .btn-outline-primary {
+            color: var(--brand);
+            border-color: var(--brand);
+        }
+
+        .btn-outline-primary:hover {
+            color: #fff;
+            background: var(--brand);
+            border-color: var(--brand);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 11px;
+            border: 1px solid #d8e0eb;
+            padding: 10px 12px;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #d08ba0;
+            box-shadow: 0 0 0 0.2rem rgba(200, 28, 58, 0.14);
+        }
+
+        .alert {
+            border-radius: 12px;
+            border: 1px solid transparent;
+            font-weight: 600;
+        }
+
+        .alert-success { border-color: rgba(21, 153, 71, 0.24); }
+        .alert-danger { border-color: rgba(220, 38, 38, 0.24); }
+        .alert-warning { border-color: rgba(245, 158, 11, 0.24); }
+
+        .blood-group-badge {
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 4px 10px;
+        }
+
+        .blood-group-o { background: #fff5d7; color: #7a5a00; }
+        .blood-group-a { background: #dcefff; color: #114a75; }
+        .blood-group-b { background: #ddf8e8; color: #0d5a2d; }
+        .blood-group-ab { background: #fde2e5; color: #8e2330; }
+
+        .main-footer {
+            text-align: center;
+            padding: 14px 10px 18px;
+            color: #6e7d91;
+            font-size: 0.82rem;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 18;
+        }
+
+        @media (max-width: 992px) {
+            .menu-toggle {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: -100%;
+                transition: left 0.25s ease;
+                width: min(290px, 84vw);
+                box-shadow: 0 18px 35px rgba(0, 0, 0, 0.3);
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar.open + .app-main .sidebar-backdrop {
+                display: block;
+            }
+
+            .sidebar-close {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .main-content {
+                padding: 16px 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 14px;
+            }
+
+            .page-title {
+                font-size: 1.18rem;
+            }
+
+            .topbar {
+                padding: 8px 10px;
+            }
+
+            .topbar-title {
+                font-size: 0.92rem;
+            }
+
+            .topbar-right a {
+                padding: 7px 9px;
+                font-size: 0.82rem;
+            }
+
+            .btn {
+                min-height: 46px;
+                padding: 0.62rem 1rem;
+                font-size: 0.97rem;
+            }
+
+            .btn.btn-sm {
+                min-height: 40px;
+                padding: 0.45rem 0.75rem;
+            }
+
+            .row > [class*="col-sm-"] {
+                flex: 0 0 100%;
+                width: 100%;
+            }
+
+            .table-responsive > .table {
+                min-width: 680px;
+            }
+
+            .table-responsive > .table th,
+            .table-responsive > .table td {
+                white-space: nowrap;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% set current_role = session.get('role_name') %}
+    {% set requests_href = '/admin/dashboard' if current_role == 'HOSPITAL_USER' else '/requests' %}
+
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-head">
+                <a class="brand" href="/">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Red Lifeline logo">
+                    <span><em>Red</em> Lifeline</span>
+                </a>
+                <button class="sidebar-close" id="sidebarClose" type="button">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item-side {% if request.path == '/' %}active{% endif %}" href="/">
+                    <i class="fas fa-chart-pie"></i> Dashboard
+                </a>
+
+                {% if current_role not in ['DONOR', 'HOSPITAL_USER'] %}
+                <a class="nav-item-side {% if '/donor' in request.path or '/add-donor' in request.path %}active{% endif %}" href="/donors">
+                    <i class="fas fa-users"></i> Donors
+                </a>
+                <div class="submenu">
+                    <a href="/add-donor" class="{% if request.path == '/add-donor' %}active{% endif %}">Add Donor</a>
+                    <a href="/donors" class="{% if request.path == '/donors' %}active{% endif %}">View Donors</a>
+                </div>
+
+                <a class="nav-item-side {% if '/inventory' in request.path %}active{% endif %}" href="/inventory">
+                    <i class="fas fa-boxes-stacked"></i> Inventory
+                </a>
+                {% endif %}
+
+                {% if current_role != 'DONOR' %}
+                <a class="nav-item-side {% if '/request' in request.path or '/blood-request' in request.path %}active{% endif %}" href="{{ requests_href }}">
+                    <i class="fas fa-hand-holding-medical"></i> Requests
+                </a>
+                <div class="submenu">
+                    <a href="/blood-request" class="{% if request.path == '/blood-request' %}active{% endif %}">Make Request</a>
+                    {% if current_role != 'HOSPITAL_USER' %}
+                    <a href="/requests" class="{% if request.path == '/requests' %}active{% endif %}">View Requests</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if current_role not in ['DONOR', 'HOSPITAL_USER'] %}
+                <a class="nav-item-side {% if '/hospitals' in request.path or '/donations' in request.path %}active{% endif %}" href="/donations">
+                    <i class="fas fa-file-waveform"></i> Reports
+                </a>
+                <div class="submenu">
+                    <a href="/hospitals" class="{% if request.path == '/hospitals' %}active{% endif %}">Hospitals</a>
+                    <a href="/donations" class="{% if request.path == '/donations' %}active{% endif %}">Donation History</a>
+                </div>
+                {% endif %}
+
+                {% if session.get('user_id') and current_role in ['SUPER_ADMIN', 'BLOOD_BANK_ADMIN'] %}
+                <a class="nav-item-side {% if '/admin' in request.path %}active{% endif %}" href="/admin/dashboard">
+                    <i class="fas fa-user-shield"></i> Admin
+                </a>
+                <div class="submenu">
+                    <a href="/admin/users" class="{% if request.path == '/admin/users' %}active{% endif %}">Manage Users</a>
+                    <a href="/admin/users/create" class="{% if request.path == '/admin/users/create' %}active{% endif %}">Create User</a>
+                    <a href="/admin/roles" class="{% if request.path == '/admin/roles' %}active{% endif %}">Roles</a>
+                </div>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-foot">
+                <div class="user-box">
+                    <div class="user-avatar"><i class="fas fa-user"></i></div>
+                    <div>
+                        <div class="user-name">{{ session.get('username', 'User') }}</div>
+                        <div class="user-role">{{ current_role or 'Member' }}</div>
+                    </div>
+                </div>
+                <div class="foot-actions">
+                    <a href="/change-password"><i class="fas fa-key me-2"></i>Change Password</a>
+                    <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+                </div>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="topbar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="menu-toggle" id="sidebarToggle" type="button">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="topbar-title">Blood Bank Management System</div>
+                </div>
+                <div class="topbar-right">
+                    <a href="/logout"><i class="fas fa-right-from-bracket me-1"></i>Logout</a>
+                </div>
+            </header>
+
+            <div class="main-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'warning' }} alert-dismissible fade show"
+                         role="alert">
+                        <strong>{{ message }}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+
+            <footer class="main-footer">
+                &copy; 2026 Red Lifeline | Blood Bank Management System
+            </footer>
+        </div>
+    </div>
+
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            if ($("#dataTable").length) {
+                $("#dataTable").DataTable({
+                    responsive: true,
+                    pageLength: 10,
+                    order: window.dataTableOrder || [],
+                    language: {
+                        search: "Filter:",
+                        lengthMenu: "Show _MENU_"
+                    }
+                });
+            }
+        });
+
+        function getBloodGroupClass(bloodGroup) {
+            if (bloodGroup.startsWith("AB")) return "blood-group-ab";
+            const group = bloodGroup.charAt(0);
+            if (group === "O") return "blood-group-o";
+            if (group === "A") return "blood-group-a";
+            if (group === "B") return "blood-group-b";
+            return "blood-group-o";
+        }
+
+        (function () {
+            const sidebar = document.getElementById("sidebar");
+            const toggle = document.getElementById("sidebarToggle");
+            const close = document.getElementById("sidebarClose");
+            const backdrop = document.getElementById("sidebarBackdrop");
+
+            if (!sidebar || !toggle || !backdrop) return;
+
+            function openSidebar() {
+                sidebar.classList.add("open");
+                backdrop.style.display = "block";
+            }
+
+            function closeSidebar() {
+                sidebar.classList.remove("open");
+                backdrop.style.display = "none";
+            }
+
+            toggle.addEventListener("click", openSidebar);
+            backdrop.addEventListener("click", closeSidebar);
+            if (close) close.addEventListener("click", closeSidebar);
+            window.addEventListener("resize", function () {
+                if (window.innerWidth > 992) {
+                    closeSidebar();
+                }
+            });
+        })();
+
+        (function () {
+            const tables = document.querySelectorAll(".main-content table.table");
+            tables.forEach(function (table) {
+                if (table.closest(".table-responsive")) return;
+
+                const wrapper = document.createElement("div");
+                wrapper.className = "table-responsive";
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+            });
+        })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

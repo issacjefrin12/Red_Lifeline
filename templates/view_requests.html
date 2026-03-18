@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Blood Requests - Blood Bank Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-flask"></i>
+            Blood Requests
+        </div>
+        <a href="/blood-request" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Request
+        </a>
+    </div>
+
+    <!-- Requests Table -->
+    <div class="card" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border: none;">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hospital</th>
+                            <th>Blood Group</th>
+                            <th>Units Needed</th>
+                            <th>Available</th>
+                            <th>Status</th>
+                            <th>Request Date</th>
+                            <th>Approval Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if requests %}
+                        {% for req in requests %}
+                        <tr>
+                            <td><strong>#{{ req.id }}</strong></td>
+                            <td>{{ req.hospital_name }}</td>
+                            <td>
+                                <span class="blood-group-badge {{ 'blood-group-' + req.blood_group[0]|lower }}">
+                                    {{ req.blood_group }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong>{{ req.units_required }}</strong>
+                            </td>
+                            <td>
+                                <strong
+                                    style="color: {% if req.available_units >= req.units_required %}#28a745{% else %}#dc3545{% endif %};">
+                                    {{ req.available_units }}
+                                </strong>
+                            </td>
+                            <td>
+                                {% if req.status == 'Approved' %}
+                                <span class="badge bg-success">Approved</span>
+                                {% elif req.status == 'Pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% else %}
+                                <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ req.request_date if req.request_date else 'N/A' }}</small>
+                            </td>
+                            <td>
+                                <small>
+                                    {% if req.approval_date %}
+                                    {{ req.approval_date }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                {% if req.status == 'Pending' %}
+                                <button class="btn btn-sm btn-success"
+                                    onclick="approveRequest({{ req.id }}, '{{ req.blood_group }}', {{ req.units_required }})"
+                                    title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="rejectRequest({{ req.id }})"
+                                    title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox"></i> No requests found
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Summary Cards -->
+    <div class="row mt-4">
+        {% set pending = requests|selectattr('status', 'equalto', 'Pending')|list|length %}
+        {% set approved = requests|selectattr('status', 'equalto', 'Approved')|list|length %}
+        {% set rejected = requests|selectattr('status', 'equalto', 'Rejected')|list|length %}
+
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card">
+                <div class="stat-card-body">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <div class="stat-value" style="color: #ff9800;">{{ pending }}</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card">
+                <div class="stat-card-body">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-value" style="color: #28a745;">{{ approved }}</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card">
+                <div class="stat-card-body">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-value" style="color: #dc3545;">{{ rejected }}</div>
+                    <div class="stat-label">Rejected</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Approve request with inventory check
+    function approveRequest(requestId, bloodGroup, unitsNeeded) {
+        const confirmed = confirm(`Approve request for ${unitsNeeded} units of ${bloodGroup}?\n\nThis will automatically deduct from inventory if available.`);
+
+        if (confirmed) {
+            updateRequestStatus(requestId, 'Approved');
+        }
+    }
+
+    // Reject request
+    function rejectRequest(requestId) {
+        const confirmed = confirm('Are you sure you want to reject this request?');
+
+        if (confirmed) {
+            updateRequestStatus(requestId, 'Rejected');
+        }
+    }
+
+    // Update request status via redirect to Flask route
+    function updateRequestStatus(requestId, newStatus) {
+        window.location.href = `/update-request/${requestId}/${newStatus}`;
+    }
+
+    window.dataTableOrder = [[6, 'desc']];
+</script>
+{% endblock %}

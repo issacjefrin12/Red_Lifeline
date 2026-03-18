@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Create New User{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 class="mb-4">
+                <i class="fas fa-user-plus"></i> Create New User
+            </h1>
+
+            {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong><i class="fas fa-exclamation-circle"></i> Error:</strong> {{ error }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endif %}
+
+            {% if success %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <strong><i class="fas fa-check-circle"></i> Success!</strong> User created successfully.
+                    <a href="/admin/users">View all users →</a>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">User Information</h5>
+                </div>
+                <div class="card-body">
+                    <form id="createUserForm" method="POST" action="/admin/users/create">
+                        <!-- Username -->
+                        <div class="form-group">
+                            <label for="username">
+                                <i class="fas fa-user"></i> Username *
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   placeholder="e.g., blood_admin" required minlength="3" maxlength="100">
+                            <small class="form-text text-muted">
+                                3-100 characters, letters, numbers, underscore, hyphen
+                            </small>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label for="email">
+                                <i class="fas fa-envelope"></i> Email Address *
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="e.g., admin@blood.local" required>
+                            <small class="form-text text-muted">
+                                Must be unique. Users will login with this email.
+                            </small>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="form-group">
+                            <label for="password">
+                                <i class="fas fa-lock"></i> Password *
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   placeholder="Enter a strong password" required minlength="8">
+                            <div id="passwordStrength" class="mt-2">
+                                <div class="progress" style="height: 0.5rem;">
+                                    <div id="passwordBar" class="progress-bar" role="progressbar" 
+                                         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small id="passwordText" class="form-text text-muted">Password strength: Weak</small>
+                            </div>
+                            <small class="form-text text-muted">
+                                At least 8 characters. Include uppercase, lowercase, numbers, and symbols for security.
+                            </small>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="form-group">
+                            <label for="passwordConfirm">
+                                <i class="fas fa-lock"></i> Confirm Password *
+                            </label>
+                            <input type="password" class="form-control" id="passwordConfirm" name="password_confirm" 
+                                   placeholder="Re-enter password" required>
+                            <div id="passwordMatch" class="mt-2" style="display: none;">
+                                <small id="passwordMatchText" class="form-text text-danger">Passwords do not match</small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Role -->
+                        <div class="form-group">
+                            <label for="role">
+                                <i class="fas fa-shield-alt"></i> Role *
+                            </label>
+                            <select class="form-control" id="role" name="role_id" required onchange="updateHospitalField()">
+                                <option value="">-- Select a Role --</option>
+                                <option value="1" data-name="SUPER_ADMIN">SUPER_ADMIN (Full system access)</option>
+                                <option value="2" data-name="BLOOD_BANK_ADMIN">BLOOD_BANK_ADMIN (Operational authority)</option>
+                                <option value="3" data-name="STAFF_MEMBER">STAFF_MEMBER (Blood bank staff)</option>
+                                <option value="4" data-name="HOSPITAL_USER">HOSPITAL_USER (Hospital requester)</option>
+                                <option value="5" data-name="DONOR">DONOR (Blood donor)</option>
+                            </select>
+                            <div id="roleDescription" class="alert alert-light mt-2" style="display: none;">
+                                <strong>Role Description:</strong>
+                                <p id="roleDescText" class="mb-0"></p>
+                            </div>
+                        </div>
+
+                        <!-- Hospital Selection (for HOSPITAL_USER) -->
+                        <div class="form-group" id="hospitalGroup" style="display: none;">
+                            <label for="hospital">
+                                <i class="fas fa-hospital"></i> Hospital *
+                            </label>
+                            <select class="form-control" id="hospital" name="hospital_id">
+                                <option value="">-- Select a Hospital --</option>
+                                {% if hospitals %}
+                                    {% for hospital in hospitals %}
+                                        <option value="{{ hospital.id }}">{{ hospital.name }}</option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Required for HOSPITAL_USER role
+                            </small>
+                        </div>
+
+                        <hr>
+
+                        <!-- Form Actions -->
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="fas fa-user-plus"></i> Create User
+                            </button>
+                            <a href="/admin/users" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Role Descriptions Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Role Descriptions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-danger"><i class="fas fa-crown"></i> SUPER_ADMIN</h6>
+                            <p class="text-muted small">
+                                Full system access. Create users, assign roles, manage all data, view audit logs.
+                            </p>
+
+                            <h6 class="text-warning mt-3"><i class="fas fa-user-tie"></i> BLOOD_BANK_ADMIN</h6>
+                            <p class="text-muted small">
+                                Operational authority. Manage inventory, approve/reject requests, view reports.
+                            </p>
+
+                            <h6 class="text-info mt-3"><i class="fas fa-user-nurse"></i> STAFF_MEMBER</h6>
+                            <p class="text-muted small">
+                                Blood bank staff. Register donors, record donations, view inventory (read-only).
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary"><i class="fas fa-hospital"></i> HOSPITAL_USER</h6>
+                            <p class="text-muted small">
+                                Hospital requester. Create blood requests, view own requests, limited visibility.
+                            </p>
+
+                            <h6 class="text-secondary mt-3"><i class="fas fa-gift"></i> DONOR</h6>
+                            <p class="text-muted small">
+                                Blood donor. View personal profile, donation history, eligibility status.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
+
+<script>
+    const roleDescriptions = {
+        '1': 'Full system access. Create users, assign roles, manage permissions, view audit logs, access system analytics.',
+        '2': 'Approve or reject blood requests, manage blood inventory, view donation records, generate reports.',
+        '3': 'Register new donors, record blood donations, update donor information, view inventory (read-only).',
+        '4': 'Create blood requests, view request status, edit/cancel pending requests, view blood availability (generic).',
+        '5': 'View personal profile, donation history, eligibility status, update contact information.'
+    };
+
+    // Password strength indicator
+    document.getElementById('password').addEventListener('input', function() {
+        const password = this.value;
+        let strength = 0;
+        let text = 'Weak';
+        let color = 'danger';
+
+        if (password.length >= 8) strength += 25;
+        if (password.length >= 12) strength += 25;
+        if (/[a-z]/.test(password)) strength += 10;
+        if (/[A-Z]/.test(password)) strength += 10;
+        if (/[0-9]/.test(password)) strength += 10;
+        if (/[^a-zA-Z0-9]/.test(password)) strength += 20;
+
+        if (strength >= 80) {
+            text = 'Strong';
+            color = 'success';
+        } else if (strength >= 60) {
+            text = 'Good';
+            color = 'info';
+        } else if (strength >= 40) {
+            text = 'Fair';
+            color = 'warning';
+        }
+
+        document.getElementById('passwordBar').style.width = strength + '%';
+        document.getElementById('passwordBar').className = `progress-bar bg-${color}`;
+        document.getElementById('passwordText').textContent = `Password strength: ${text}`;
+
+        checkPasswordMatch();
+    });
+
+    // Confirm password
+    document.getElementById('passwordConfirm').addEventListener('input', function() {
+        checkPasswordMatch();
+    });
+
+    function checkPasswordMatch() {
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('passwordConfirm').value;
+        const matchDiv = document.getElementById('passwordMatch');
+
+        if (confirm) {
+            if (password === confirm) {
+                matchDiv.style.display = 'none';
+            } else {
+                matchDiv.style.display = 'block';
+            }
+        }
+    }
+
+    // Role description
+    document.getElementById('role').addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        const descDiv = document.getElementById('roleDescription');
+        const descText = document.getElementById('roleDescText');
+        
+        if (this.value) {
+            descText.textContent = roleDescriptions[this.value];
+            descDiv.style.display = 'block';
+        } else {
+            descDiv.style.display = 'none';
+        }
+
+        updateHospitalField();
+    });
+
+    function updateHospitalField() {
+        const roleId = document.getElementById('role').value;
+        const hospitalGroup = document.getElementById('hospitalGroup');
+        
+        // Show hospital field only for HOSPITAL_USER (id=4)
+        if (roleId === '4') {
+            hospitalGroup.style.display = 'block';
+            document.getElementById('hospital').required = true;
+        } else {
+            hospitalGroup.style.display = 'none';
+            document.getElementById('hospital').required = false;
+            document.getElementById('hospital').value = '';
+        }
+    }
+
+    // Form validation
+    document.getElementById('createUserForm').addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('passwordConfirm').value;
+        const role = document.getElementById('role').value;
+        const hospital = document.getElementById('hospital').value;
+
+        if (password !== confirm) {
+            e.preventDefault();
+            alert('Passwords do not match!');
+            return;
+        }
+
+        if (role === '4' && !hospital) {
+            e.preventDefault();
+            alert('Hospital selection is required for HOSPITAL_USER role!');
+            return;
+        }
+
+        // Disable submit button to prevent double submission
+        document.getElementById('submitBtn').disabled = true;
+    });
+</script>
+{% endblock %}

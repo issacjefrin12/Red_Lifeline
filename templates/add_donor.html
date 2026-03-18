@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Add Donor - Blood Bank Management System{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 768px) {
+        #addDonorForm .form-control,
+        #addDonorForm .form-select {
+            min-height: 46px;
+        }
+
+        #addDonorForm .d-grid > .btn,
+        #addDonorForm .d-grid > a.btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-user-plus"></i>
+            Add New Donor
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border: none;">
+                <div class="card-body p-4">
+                    <form method="POST" action="/add-donor" id="addDonorForm">
+                        <!-- Name Field -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label">
+                                <i class="fas fa-user"></i> Full Name *
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="name" 
+                                name="name" 
+                                placeholder="Enter donor's full name"
+                                required
+                                minlength="3"
+                                maxlength="100"
+                            >
+                            <small class="text-muted">Minimum 3 characters</small>
+                        </div>
+
+                        <!-- Age Field -->
+                        <div class="mb-3">
+                            <label for="age" class="form-label">
+                                <i class="fas fa-calendar"></i> Age *
+                            </label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="age" 
+                                name="age" 
+                                placeholder="Enter age"
+                                required
+                                min="19"
+                                max="120"
+                            >
+                            <small class="text-muted">Must be older than 18 years</small>
+                        </div>
+
+                        <!-- Gender Field -->
+                        <div class="mb-3">
+                            <label for="gender" class="form-label">
+                                <i class="fas fa-venus-mars"></i> Gender *
+                            </label>
+                            <select 
+                                class="form-select" 
+                                id="gender" 
+                                name="gender" 
+                                required
+                            >
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Blood Group Field -->
+                        <div class="mb-3">
+                            <label for="blood_group" class="form-label">
+                                <i class="fas fa-droplet"></i> Blood Group *
+                            </label>
+                            <select 
+                                class="form-select" 
+                                id="blood_group" 
+                                name="blood_group" 
+                                required
+                            >
+                                <option value="">Select Blood Group</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                            </select>
+                        </div>
+
+                        <!-- Phone Field -->
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">
+                                <i class="fas fa-phone"></i> Phone Number *
+                            </label>
+                            <input 
+                                type="tel" 
+                                class="form-control" 
+                                id="phone" 
+                                name="phone" 
+                                placeholder="Enter phone number (10-15 digits)"
+                                required
+                                pattern="[0-9]{10,15}"
+                            >
+                            <small class="text-muted">10-15 digits, numbers only</small>
+                        </div>
+
+                        <!-- Email Field -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope"></i> Email (Optional)
+                            </label>
+                            <input
+                                type="email"
+                                class="form-control"
+                                id="email"
+                                name="email"
+                                placeholder="Enter donor email"
+                            >
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            <button 
+                                type="submit" 
+                                class="btn btn-primary"
+                                id="submitBtn"
+                            >
+                                <i class="fas fa-save"></i> Add Donor
+                            </button>
+                            <a href="/donors" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left"></i> Back to Donors
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Info Box -->
+                    <div class="alert alert-info mt-4 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Note:</strong> All fields are required.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form validation
+    document.getElementById('addDonorForm').addEventListener('submit', function(e) {
+        const age = parseInt(document.getElementById('age').value);
+        
+        if (age <= 18) {
+            e.preventDefault();
+            alert('Donor must be older than 18 years');
+            return false;
+        }
+    });
+
+    // Phone validation in real-time
+    document.getElementById('phone').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+</script>
+{% endblock %}

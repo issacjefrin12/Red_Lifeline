@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Member Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <h1 class="h3 mb-1">Staff Operations</h1>
+            <div class="text-muted">Data entry, donor handling, and donation recording.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-success" href="/add-donor">Register Donor</a>
+            <a class="btn btn-outline-danger" href="/add-donation">Record Donation</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Total Donors</div>
+                    <div class="display-6 fw-bold">{{ data.summary.total_donors }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Today's Donations</div>
+                    <div class="display-6 fw-bold text-success">{{ data.summary.todays_donations }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Eligible Donors</div>
+                    <div class="display-6 fw-bold">{{ data.summary.eligible_donors }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Low Stock Alert</div>
+                    <div class="display-6 fw-bold text-danger">{{ data.summary.low_stock_count }}</div>
+                    <div class="small text-muted">Read-only</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h5 class="mb-0">Donor Management</h5>
+                        <a class="btn btn-sm btn-outline-secondary" href="/donors">Open Full Directory</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <input class="form-control" id="donorSearch" placeholder="Search by name or phone">
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="donorBloodGroup">
+                                <option value="">All Blood Groups</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button class="btn btn-outline-secondary" type="button" onclick="resetDonorFilters()">Reset</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0" id="donorTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Blood Group</th>
+                                    <th>Last Donation</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if data.donors %}
+                                    {% for donor in data.donors %}
+                                        <tr data-name="{{ donor.name|lower }} {{ donor.phone|default('')|lower }}" data-group="{{ donor.blood_group }}">
+                                            <td class="fw-semibold">{{ donor.name }}</td>
+                                            <td><span class="badge bg-primary">{{ donor.blood_group }}</span></td>
+                                            <td>{{ donor.last_donation_date|strftime('%Y-%m-%d') if donor.last_donation_date else 'Never' }}</td>
+                                            <td>
+                                                {% if donor.status == 'Active' %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="d-flex flex-wrap justify-content-end gap-2">
+                                                    <a class="btn btn-sm btn-outline-primary" href="/donors">View</a>
+                                                    <a class="btn btn-sm btn-outline-secondary" href="/donors">Edit</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">No donors found.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-muted small mt-3">
+                        Donors cannot be deleted permanently. Deactivate instead.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Record Donation</h5>
+                    <div class="text-muted small mt-1">Inventory updates automatically after recording.</div>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/add-donation">
+                        <div class="mb-3">
+                            <label class="form-label" for="donorSelect">Select Donor</label>
+                            <select class="form-select" id="donorSelect" name="donor_id" required onchange="fillDonorGroup()">
+                                <option value="">Choose donor</option>
+                                {% for donor in data.donors %}
+                                    <option value="{{ donor.id }}" data-group="{{ donor.blood_group }}">{{ donor.name }} ({{ donor.phone }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="donorGroup">Blood Group</label>
+                            <input class="form-control" id="donorGroup" type="text" name="blood_group_display" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="units">Units</label>
+                            <input class="form-control" id="units" type="number" name="units" min="1" max="5" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="healthStatus">Health Status</label>
+                            <input class="form-control" id="healthStatus" type="text" name="health_status" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="donationDate">Donation Date</label>
+                            <input class="form-control" id="donationDate" type="date" name="donation_date" required>
+                        </div>
+                        <button class="btn btn-danger w-100" type="submit">Record Donation</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Low Stock Alerts</h5>
+                    <div class="text-muted small mt-1">Read-only visibility.</div>
+                </div>
+                <div class="card-body">
+                    {% if data.low_stock %}
+                        <ul class="list-group list-group-flush">
+                            {% for item in data.low_stock %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ item.blood_group }}</span>
+                                    <span class="badge bg-danger">{{ item.quantity_units }} units</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="text-muted">No critical low stock groups.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white border-0">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h5 class="mb-0">Donation History</h5>
+                <div class="text-muted small">Filter by date or blood group.</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <input class="form-control" type="date" id="donationFilterDate">
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="donationFilterGroup">
+                        <option value="">All Blood Groups</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button class="btn btn-outline-secondary" type="button" onclick="resetDonationFilters()">Reset</button>
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+                <table class="table table-sm table-hover align-middle mb-0" id="donationTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Donor</th>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if data.donations_recent %}
+                            {% for donation in data.donations_recent %}
+                                <tr data-group="{{ donation.blood_group }}" data-date="{{ donation.donation_date|strftime('%Y-%m-%d') }}">
+                                    <td class="fw-semibold">{{ donation.donor_name }}</td>
+                                    <td><span class="badge bg-danger">{{ donation.blood_group }}</span></td>
+                                    <td>{{ donation.units }}</td>
+                                    <td>{{ donation.donation_date|strftime('%Y-%m-%d') }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No donations recorded.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-danger shadow-sm">
+        <div class="card-header bg-white border-0">
+            <h5 class="mb-0">Staff Boundaries</h5>
+            <div class="text-muted small mt-1">Separation of duties prevents misuse.</div>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li>Cannot approve or reject blood requests.</li>
+                <li>Cannot modify inventory manually.</li>
+                <li>Cannot access user management or change roles.</li>
+                <li>Can add stock through donations only.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .display-6 {
+        font-size: 1.9rem;
+    }
+</style>
+
+<script>
+    function fillDonorGroup() {
+        const select = document.getElementById('donorSelect');
+        const group = select.options[select.selectedIndex]?.dataset?.group || '';
+        document.getElementById('donorGroup').value = group;
+    }
+
+    function resetDonorFilters() {
+        document.getElementById('donorSearch').value = '';
+        document.getElementById('donorBloodGroup').value = '';
+        applyDonorFilters();
+    }
+
+    function applyDonorFilters() {
+        const search = document.getElementById('donorSearch').value.toLowerCase();
+        const group = document.getElementById('donorBloodGroup').value;
+        const rows = document.querySelectorAll('#donorTable tbody tr');
+        rows.forEach(row => {
+            const matchSearch = row.dataset.name.includes(search);
+            const matchGroup = !group || row.dataset.group === group;
+            row.style.display = (matchSearch && matchGroup) ? '' : 'none';
+        });
+    }
+
+    function resetDonationFilters() {
+        document.getElementById('donationFilterDate').value = '';
+        document.getElementById('donationFilterGroup').value = '';
+        applyDonationFilters();
+    }
+
+    function applyDonationFilters() {
+        const dateValue = document.getElementById('donationFilterDate').value;
+        const group = document.getElementById('donationFilterGroup').value;
+        const rows = document.querySelectorAll('#donationTable tbody tr');
+        rows.forEach(row => {
+            const matchDate = !dateValue || row.dataset.date === dateValue;
+            const matchGroup = !group || row.dataset.group === group;
+            row.style.display = (matchDate && matchGroup) ? '' : 'none';
+        });
+    }
+
+    document.getElementById('donorSearch').addEventListener('input', applyDonorFilters);
+    document.getElementById('donorBloodGroup').addEventListener('change', applyDonorFilters);
+    document.getElementById('donationFilterDate').addEventListener('change', applyDonationFilters);
+    document.getElementById('donationFilterGroup').addEventListener('change', applyDonationFilters);
+    fillDonorGroup();
+</script>
+{% endblock %}

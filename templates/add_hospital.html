@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Add Hospital - Blood Bank Management System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-hospital"></i>
+            Add New Hospital
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border: none;">
+                <div class="card-body p-4">
+                    <form method="POST" action="/add-hospital" id="addHospitalForm">
+                        <!-- Hospital Name -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label">
+                                <i class="fas fa-hospital"></i> Hospital Name *
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="name" 
+                                name="name" 
+                                placeholder="Enter hospital name"
+                                required
+                                minlength="3"
+                                maxlength="150"
+                            >
+                            <small class="text-muted">Minimum 3 characters</small>
+                        </div>
+
+                        <!-- Contact Number -->
+                        <div class="mb-3">
+                            <label for="contact" class="form-label">
+                                <i class="fas fa-phone"></i> Contact Number *
+                            </label>
+                            <input 
+                                type="tel" 
+                                class="form-control" 
+                                id="contact" 
+                                name="contact" 
+                                placeholder="Enter contact number"
+                                required
+                                pattern="[0-9]{10,15}"
+                            >
+                            <small class="text-muted">10-15 digits</small>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope"></i> Email Address
+                            </label>
+                            <input 
+                                type="email" 
+                                class="form-control" 
+                                id="email" 
+                                name="email" 
+                                placeholder="Enter email address (optional)"
+                            >
+                            <small class="text-muted">Optional field</small>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="mb-3">
+                            <label for="address" class="form-label">
+                                <i class="fas fa-map-marker-alt"></i> Address *
+                            </label>
+                            <textarea 
+                                class="form-control" 
+                                id="address" 
+                                name="address" 
+                                rows="3" 
+                                placeholder="Enter complete hospital address"
+                                required
+                                minlength="5"
+                                maxlength="255"
+                            ></textarea>
+                            <small class="text-muted">Full address including street, city, state, zip</small>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            <button 
+                                type="submit" 
+                                class="btn btn-primary"
+                                id="submitBtn"
+                            >
+                                <i class="fas fa-save"></i> Add Hospital
+                            </button>
+                            <a href="/hospitals" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left"></i> Back to Hospitals
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Info Box -->
+                    <div class="alert alert-info mt-4 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Note:</strong> Contact number and address are required fields.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Phone number formatting
+    document.getElementById('contact').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    // Email validation
+    const emailInput = document.getElementById('email');
+    emailInput.addEventListener('blur', function() {
+        if (this.value && !this.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            // Optional: show warning but don't block since it's optional
+        }
+    });
+</script>
+{% endblock %}

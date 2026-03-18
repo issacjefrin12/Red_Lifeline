@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Super Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <h1 class="h3 mb-1">Super Admin</h1>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary" href="{{ url_for('user_mgmt.list_users') }}">Manage Users</a>
+            <a class="btn btn-success" href="{{ url_for('user_mgmt.create_user') }}">Create User</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('user_mgmt.list_roles') }}">Manage Roles</a>
+            <a class="btn btn-outline-primary" href="/admin/bootstrap-accounts">Bootstrap Logins</a>
+            <a class="btn btn-outline-dark" href="{{ url_for('audit_logs') }}">View Audit Logs</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-4 col-xl-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Total Blood Banks</div>
+                    <div class="display-6 fw-bold">{{ data.total_blood_banks }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-4 col-xl-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Total Hospitals</div>
+                    <div class="display-6 fw-bold">{{ data.total_hospitals }}</div>
+                    <div class="text-muted small">Registered</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-4 col-xl-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Total Donors</div>
+                    <div class="display-6 fw-bold">{{ data.total_donors }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-4 col-xl-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Total Users</div>
+                    <div class="display-6 fw-bold">{{ data.total_users }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-4 col-xl-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Pending Requests</div>
+                    <div class="display-6 fw-bold">{{ data.pending_requests }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-4 col-xl-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase small">Active Sessions</div>
+                    <div class="display-6 fw-bold">
+                        {% if data.active_sessions is not none %}
+                            {{ data.active_sessions }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white border-0">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h5 class="mb-0">User Management</h5>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if data.users %}
+                            {% for user in data.users %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">{{ user.username }}</div>
+                                        <div class="text-muted small">{{ user.email }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if user.role_name == 'SUPER_ADMIN' %}bg-danger{% elif user.role_name == 'BLOOD_BANK_ADMIN' %}bg-warning text-dark{% elif user.role_name == 'STAFF_MEMBER' %}bg-info text-dark{% elif user.role_name == 'HOSPITAL_USER' %}bg-primary{% elif user.role_name == 'DONOR' %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ user.role_name or 'Unassigned' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.last_login %}
+                                            {{ user.last_login|strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                            <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex flex-wrap justify-content-end gap-2">
+                                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('user_mgmt.view_user', user_id=user.id) }}">View Details</a>
+                                            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('user_mgmt.view_user', user_id=user.id) }}">Edit Role</a>
+                                            {% if user.is_active %}
+                                                <form method="post" action="{{ url_for('user_mgmt.deactivate_user', user_id=user.id) }}" onsubmit="return confirm('Deactivate this user?');">
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                                </form>
+                                            {% else %}
+                                                <form method="post" action="{{ url_for('user_mgmt.reactivate_user', user_id=user.id) }}" onsubmit="return confirm('Reactivate this user?');">
+                                                    <button class="btn btn-sm btn-outline-success" type="submit">Reactivate</button>
+                                                </form>
+                                            {% endif %}
+                                            {% if user.failed_login_attempts and user.failed_login_attempts > 0 %}
+                                                <form method="post" action="{{ url_for('user_mgmt.reset_failed_login', user_id=user.id) }}" onsubmit="return confirm('Reset failed login attempts?');">
+                                                    <button class="btn btn-sm btn-outline-warning" type="submit">Reset Login ({{ user.failed_login_attempts }})</button>
+                                                </form>
+                                            {% else %}
+                                                <button class="btn btn-sm btn-outline-secondary" type="button" disabled>Reset Login</button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No users found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h5 class="mb-0">Role and Permission Management</h5>
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('user_mgmt.list_roles') }}">View All Roles</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Role</th>
+                                    <th>Permissions</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if data.roles_with_permissions %}
+                                    {% for role in data.roles_with_permissions %}
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">{{ role.role_name }}</div>
+                                                <div class="text-muted small">{{ role.description or 'No description provided.' }}</div>
+                                            </td>
+                                            <td>
+                                                {% if role.permissions %}
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        {% for perm in role.permissions %}
+                                                            <span class="badge bg-secondary">{{ perm }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted small">No permissions assigned.</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('user_mgmt.view_role', role_id=role.id) }}">View Details</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">No roles found.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h5 class="mb-0">Audit Log Access</h5>
+                        <a class="btn btn-sm btn-outline-dark" href="{{ url_for('audit_logs') }}">Open Full Audit Log</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Resource</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if data.audit_logs %}
+                                    {% for log in data.audit_logs %}
+                                        <tr>
+                                            <td>{{ log.username or 'System' }}</td>
+                                            <td>{{ log.action }}</td>
+                                            <td>
+                                                {{ log.resource_type }}
+                                                {% if log.resource_id %}
+                                                    #{{ log.resource_id }}
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ log.timestamp|strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                <span class="badge {% if log.status == 'Denied' %}bg-warning text-dark{% elif log.status == 'Failed' %}bg-danger{% else %}bg-success{% endif %}">
+                                                    {{ log.status }}
+                                                </span>
+                                            </td>
+                                            <td class="text-muted small">{{ log.reason_if_denied or '-' }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">No audit logs available.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .display-6 {
+        font-size: 1.9rem;
+    }
+</style>
+{% endblock %}

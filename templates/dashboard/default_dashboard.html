@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm" style="max-width: 840px; margin: 0 auto;">
+        <div class="card-body p-4 p-lg-5">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="admin-avatar"><i class="fas fa-chart-line"></i></div>
+                <div>
+                    <h3 class="mb-1">Dashboard Setup In Progress</h3>
+                    <div class="text-muted">Role: <strong>{{ role or 'Unknown' }}</strong></div>
+                </div>
+            </div>
+            <p class="text-muted mb-4">
+                This role has no dedicated dashboard template yet. Core modules are available through navigation.
+            </p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-primary" href="/">Go to Main Dashboard</a>
+                <a class="btn btn-outline-primary" href="/requests">View Requests</a>
+                <a class="btn btn-outline-primary" href="/inventory">View Inventory</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

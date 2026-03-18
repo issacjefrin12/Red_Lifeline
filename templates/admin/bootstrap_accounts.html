@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Bootstrap Accounts{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <h1 class="h4 mb-1">Bootstrap Donor and Hospital Logins</h1>
+            <div class="text-muted">Creates usernames and passwords for donors and hospitals without accounts.</div>
+        </div>
+        <a class="btn btn-outline-secondary" href="{{ url_for('user_mgmt.dashboard') }}">Back to Dashboard</a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <p class="mb-3">
+                This action is safe to run multiple times. Existing accounts are skipped.
+            </p>
+            <form method="post">
+                <button class="btn btn-primary" type="submit">Generate Accounts</button>
+            </form>
+        </div>
+    </div>
+
+    {% if created %}
+        <div class="row g-4">
+            <div class="col-xl-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0">Donor Accounts ({{ created.donors|length }})</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Blood Group</th>
+                                        <th>Username</th>
+                                        <th>Password</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if created.donors %}
+                                        {% for donor in created.donors %}
+                                            <tr>
+                                                <td>{{ donor.name }}</td>
+                                                <td>{{ donor.blood_group }}</td>
+                                                <td>{{ donor.username }}</td>
+                                                <td><code>{{ donor.password }}</code></td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">No new donor accounts.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0">Hospital Accounts ({{ created.hospitals|length }})</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Hospital</th>
+                                        <th>Username</th>
+                                        <th>Password</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if created.hospitals %}
+                                        {% for hospital in created.hospitals %}
+                                            <tr>
+                                                <td>{{ hospital.name }}</td>
+                                                <td>{{ hospital.username }}</td>
+                                                <td><code>{{ hospital.password }}</code></td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-3">No new hospital accounts.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Record Donation - Blood Bank Management System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-syringe"></i>
+            Record New Donation
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border: none;">
+                <div class="card-body p-4">
+                    <form method="POST" action="/add-donation" id="addDonationForm">
+                        <!-- Donor Selection -->
+                        <div class="mb-3">
+                            <label for="donor_id" class="form-label">
+                                <i class="fas fa-user"></i> Select Donor *
+                            </label>
+                            <select class="form-select" id="donor_id" name="donor_id" required
+                                onchange="updateDonorInfo()">
+                                <option value="">-- Choose a Donor --</option>
+                                {% for donor in donors %}
+                                <option value="{{ donor.id }}" data-blood="{{ donor.blood_group }}">
+                                    {{ donor.name }} ({{ donor.blood_group }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Blood Group (Auto-filled) -->
+                        <div class="mb-3">
+                            <label for="blood_group" class="form-label">
+                                <i class="fas fa-droplet"></i> Blood Group (Auto-filled) *
+                            </label>
+                            <input type="text" class="form-control" id="blood_group" name="blood_group" readonly
+                                placeholder="Will be auto-filled">
+                        </div>
+
+                        <!-- Units -->
+                        <div class="mb-3">
+                            <label for="units" class="form-label">
+                                <i class="fas fa-vial"></i> Units to Donate *
+                            </label>
+                            <input type="number" class="form-control" id="units" name="units"
+                                placeholder="Enter number of units" required min="1" max="5" value="1">
+                            <small class="text-muted">Standard: 1 unit = 500ml of blood</small>
+                        </div>
+
+                        <!-- Donation Date -->
+                        <div class="mb-3">
+                            <label for="donation_date" class="form-label">
+                                <i class="fas fa-calendar"></i> Donation Date *
+                            </label>
+                            <input type="date" class="form-control" id="donation_date" name="donation_date" required>
+                        </div>
+
+                        <!-- Health Status -->
+                        <div class="mb-3">
+                            <label for="health_status" class="form-label">
+                                <i class="fas fa-heartbeat"></i> Health Status
+                            </label>
+                            <select class="form-select" id="health_status" name="health_status">
+                                <option value="Healthy">Healthy</option>
+                                <option value="Minor Illness">Minor Illness</option>
+                                <option value="Under Treatment">Under Treatment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-save"></i> Record Donation
+                            </button>
+                            <a href="/donations" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left"></i> Back to Donations
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Info Box -->
+                    <div class="alert alert-info mt-4 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> Recording a donation will automatically update the blood inventory.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Set today's date as default
+    document.getElementById('donation_date').valueAsDate = new Date();
+
+    // Auto-fill blood group when donor is selected
+    function updateDonorInfo() {
+        const select = document.getElementById('donor_id');
+        const selected = select.options[select.selectedIndex];
+        const bloodGroup = selected.getAttribute('data-blood');
+        document.getElementById('blood_group').value = bloodGroup || '';
+    }
+
+    // Form validation
+    document.getElementById('addDonationForm').addEventListener('submit', function (e) {
+        const units = parseInt(document.getElementById('units').value);
+
+        if (units <= 0 || units > 5) {
+            e.preventDefault();
+            alert('Units must be between 1 and 5');
+            return false;
+        }
+
+        const donationDate = new Date(document.getElementById('donation_date').value);
+        const today = new Date();
+
+        if (donationDate > today) {
+            e.preventDefault();
+            alert('Donation date cannot be in the future');
+            return false;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Make Blood Request - Blood Bank Management System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-flask"></i>
+            Make Blood Request
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border: none;">
+                <div class="card-body p-4">
+                    <form method="POST" action="/blood-request" id="makeRequestForm">
+                        <!-- Hospital Selection -->
+                        <div class="mb-3">
+                            <label for="hospital_id" class="form-label">
+                                <i class="fas fa-hospital"></i> Select Hospital *
+                            </label>
+                            <select 
+                                class="form-select" 
+                                id="hospital_id" 
+                                name="hospital_id" 
+                                required
+                            >
+                                <option value="">-- Choose a Hospital --</option>
+                                {% for hospital in hospitals %}
+                                <option value="{{ hospital.id }}">
+                                    {{ hospital.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Blood Group -->
+                        <div class="mb-3">
+                            <label for="blood_group" class="form-label">
+                                <i class="fas fa-droplet"></i> Blood Group Required *
+                            </label>
+                            <select 
+                                class="form-select" 
+                                id="blood_group" 
+                                name="blood_group" 
+                                required
+                            >
+                                <option value="">-- Select Blood Group --</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                            </select>
+                        </div>
+
+                        <!-- Units Required -->
+                        <div class="mb-3">
+                            <label for="units_required" class="form-label">
+                                <i class="fas fa-vial"></i> Units Required *
+                            </label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="units_required" 
+                                name="units_required" 
+                                placeholder="Enter number of units"
+                                required
+                                min="1"
+                                max="50"
+                                value="1"
+                            >
+                            <small class="text-muted">1 unit = 500ml of blood (Maximum: 50 units)</small>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                            <button 
+                                type="submit" 
+                                class="btn btn-primary"
+                                id="submitBtn"
+                            >
+                                <i class="fas fa-paper-plane"></i> Submit Request
+                            </button>
+                            <a href="/requests" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left"></i> View Requests
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Info Box -->
+                    <div class="alert alert-info mt-4 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Note:</strong> Your request will be automatically processed.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form validation
+    document.getElementById('makeRequestForm').addEventListener('submit', function(e) {
+        const units = parseInt(document.getElementById('units_required').value);
+        
+        if (units <= 0 || units > 50) {
+            e.preventDefault();
+            alert('Units must be between 1 and 50');
+            return false;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,9 @@
+Flask==2.3.3
+mysql-connector-python==8.0.33
+PyMySQL==1.1.0
+Werkzeug==2.3.7
+Jinja2==3.1.2
+bcrypt==4.1.2
+python-dotenv==1.0.0
+uvicorn==0.30.6
+asgiref==3.8.1

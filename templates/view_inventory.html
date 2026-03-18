@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}View Inventory - Blood Bank Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-box"></i>
+            Blood Inventory
+        </div>
+        <div>
+            <button class="btn btn-outline-primary" id="refreshBtn">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Inventory Grid -->
+        <div class="col-12">
+            <div class="row" id="inventoryGrid">
+                {% if inventory %}
+                {% for item in inventory %}
+                <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                    <div class="card stat-card"
+                        style="border-top-color: {% if item.blood_group[0] == 'O' %}#ff9800{% elif item.blood_group[0] == 'A' %}#2196f3{% elif item.blood_group[0] == 'B' %}#4caf50{% else %}#f44336{% endif %};">
+                        <div class="stat-card-body">
+                            <div class="stat-icon"
+                                style="background: linear-gradient(135deg, {% if item.blood_group[0] == 'O' %}#ff9800{% elif item.blood_group[0] == 'A' %}#2196f3{% elif item.blood_group[0] == 'B' %}#4caf50{% else %}#f44336{% endif %}, {% if item.blood_group[0] == 'O' %}#ff6f00{% elif item.blood_group[0] == 'A' %}#1976d2{% elif item.blood_group[0] == 'B' %}#388e3c{% else %}#d32f2f{% endif %});">
+                                <i class="fas fa-droplet"></i>
+                            </div>
+                            <div class="text-center">
+                                <h4 class="mb-1"
+                                    style="color: {% if item.blood_group[0] == 'O' %}#ff9800{% elif item.blood_group[0] == 'A' %}#2196f3{% elif item.blood_group[0] == 'B' %}#4caf50{% else %}#f44336{% endif %};">
+                                    {{ item.blood_group }}
+                                </h4>
+                                <p class="mb-2 h3" style="color: var(--dark-gray);">
+                                    {{ item.quantity_units }}
+                                </p>
+                                <small class="text-muted">Units Available</small>
+                            </div>
+                            <div class="mt-3 text-center">
+                                {% if item.quantity_units == 0 %}
+                                <span class="badge bg-danger w-100">Out of Stock</span>
+                                {% elif item.quantity_units < 5 %} <span class="badge bg-warning text-dark w-100">Low
+                                    Stock</span>
+                                    {% elif item.quantity_units < 10 %} <span class="badge bg-info text-dark w-100">
+                                        Moderate</span>
+                                        {% else %}
+                                        <span class="badge bg-success w-100">Adequate</span>
+                                        {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No inventory data available
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Table View -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="fas fa-table"></i> Detailed Inventory View
+            </h5>
+            <div class="card" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border: none;">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="inventoryTable">
+                            <thead>
+                                <tr>
+                                    <th>Blood Group</th>
+                                    <th>Units Available</th>
+                                    <th>Status</th>
+                                    <th>Stock Level</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if inventory %}
+                                {% for item in inventory %}
+                                <tr>
+                                    <td>
+                                        <span
+                                            class="blood-group-badge {{ 'blood-group-' + item.blood_group[0]|lower }}">
+                                            <i class="fas fa-droplet"></i> {{ item.blood_group }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ item.quantity_units }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if item.quantity_units == 0 %}
+                                        <span class="badge bg-danger">Out of Stock</span>
+                                        {% elif item.quantity_units < 5 %} <span class="badge bg-warning text-dark">Low
+                                            Stock</span>
+                                            {% elif item.quantity_units < 10 %} <span class="badge bg-info text-dark">
+                                                Moderate</span>
+                                                {% else %}
+                                                <span class="badge bg-success">Adequate</span>
+                                                {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" role="progressbar"
+                                                style="width: {{ [item.quantity_units * 5, 100]|min }}%; background: linear-gradient(90deg, var(--primary-red), var(--dark-red));"
+                                                aria-valuenow="{{ [item.quantity_units * 5, 100]|min }}"
+                                                aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted" id="update-{{ item.blood_group }}">Just now</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        No inventory data
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mt-5">
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card">
+                <div class="stat-card-body">
+                    <div class="stat-icon">
+                        <i class="fas fa-cubes"></i>
+                    </div>
+                    <div class="stat-value">{{ inventory|length }}</div>
+                    <div class="stat-label">Blood Group Types</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card">
+                <div class="stat-card-body">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);">
+                        <i class="fas fa-vial"></i>
+                    </div>
+                    <div class="stat-value" style="color: #28a745;">
+                        {{ inventory|map(attribute='quantity_units')|sum }}
+                    </div>
+                    <div class="stat-label">Total Units</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card">
+                <div class="stat-card-body">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="stat-value" style="color: #dc3545;">
+                        {% set critical_count = inventory|selectattr('quantity_units', 'equalto', 0)|list|length %}
+                        {{ critical_count }}
+                    </div>
+                    <div class="stat-label">Out of Stock</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <canvas id="inventoryChart" width="400" height="200"></canvas>
+    <script>
+        const ctx = document.getElementById('inventoryChart').getContext('2d');
+        const inventoryData = {{ inventory_data|tojson }}; // Pass data from Flask
+
+        const labels = inventoryData.map(item => item.blood_group);
+        const quantities = inventoryData.map(item => item.quantity_units);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Blood Inventory',
+                    data: quantities,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', function () {
+        location.reload();
+    });
+
+    // Initialize DataTable if needed
+    $(document).ready(function () {
+        if ($('#inventoryTable').length) {
+            $('#inventoryTable').DataTable({
+                responsive: true,
+                order: [[1, 'desc']],
+                language: {
+                    search: "Filter by blood group:",
+                    lengthMenu: "Show _MENU_ records per page"
+                }
+            });
+        }
+    });
+
+    // Auto-refresh every 5 minutes
+    setInterval(function () {
+        fetch('/api/inventory')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Inventory updated');
+                    // Could update the page with fresh data here
+                }
+            })
+            .catch(error => console.log('Refresh failed:', error));
+    }, 300000); // 5 minutes
+</script>
+{% endblock %}
