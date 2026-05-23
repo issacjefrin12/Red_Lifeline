@@ -173,6 +173,12 @@ On first run, the app seeds default operational users (if missing). Update these
 - Missing tables:
   - Keep `BBMS_AUTO_INIT_DB=true` or run `schema.sql` manually
 
+## Screenshots of Red Lifeline
+
+<img width="1919" height="1025" alt="Screenshot 2026-03-18 190801" src="https://github.com/user-attachments/assets/26c2257c-ab11-4254-82aa-9f72ddca8e32" />
+<img width="1919" height="1031" alt="Screenshot 2026-03-18 190529" src="https://github.com/user-attachments/assets/1e040352-9821-47d2-8846-2d6ab40faa31" />
+
+
 ## Developed By
 
 Jefrin
