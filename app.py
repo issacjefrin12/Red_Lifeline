@@ -12,10 +12,12 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 from decimal import Decimal
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 import secrets
 import string
 import hashlib
 from transaction_lock_handler import approve_blood_request, InsufficientStockError, AlreadyProcessedError
+from db_config import get_db_config
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -27,14 +29,57 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 
 # MySQL Database Configuration
 DB_CONFIG = {
-    'host': os.getenv('BBMS_DB_HOST', 'localhost'),
-    'user': os.getenv('BBMS_DB_USER', 'root'),
-    'password': os.getenv('BBMS_DB_PASSWORD', 'jefrin'),
-    'database': os.getenv('BBMS_DB_NAME', 'blood_bank_db'),
-    'port': int(os.getenv('BBMS_DB_PORT', '3306'))
+    **get_db_config()
 }
 
 BLOOD_GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
+ALLOWED_PROFILE_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+DONOR_PROFILE_UPLOAD_DIR = os.path.join(app.root_path, 'static', 'uploads', 'donor_profiles')
+app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('BBMS_MAX_UPLOAD_MB', '5')) * 1024 * 1024
+
+
+def allowed_profile_image_file(filename):
+    """Return True if uploaded filename has an allowed image extension."""
+    if not filename or '.' not in filename:
+        return False
+    ext = filename.rsplit('.', 1)[1].lower()
+    return ext in ALLOWED_PROFILE_IMAGE_EXTENSIONS
+
+
+def remove_local_donor_profile_image(profile_image_url):
+    """Remove locally stored donor profile image if it belongs to upload dir."""
+    if not profile_image_url:
+        return
+    local_prefix = '/static/uploads/donor_profiles/'
+    if not str(profile_image_url).startswith(local_prefix):
+        return
+    filename = os.path.basename(profile_image_url)
+    if not filename:
+        return
+    absolute_path = os.path.join(DONOR_PROFILE_UPLOAD_DIR, filename)
+    if os.path.isfile(absolute_path):
+        try:
+            os.remove(absolute_path)
+        except OSError:
+            pass
+
+
+def save_donor_profile_image(file_storage, donor_id):
+    """Save donor profile image and return public static path."""
+    if not file_storage or not file_storage.filename:
+        return None, None
+
+    filename = secure_filename(file_storage.filename)
+    if not allowed_profile_image_file(filename):
+        allowed_list = ", ".join(sorted(ALLOWED_PROFILE_IMAGE_EXTENSIONS))
+        return None, f"Invalid image type. Allowed: {allowed_list}."
+
+    extension = filename.rsplit('.', 1)[1].lower()
+    unique_name = f"donor_{donor_id}_{int(datetime.utcnow().timestamp())}_{secrets.token_hex(4)}.{extension}"
+    os.makedirs(DONOR_PROFILE_UPLOAD_DIR, exist_ok=True)
+    target_path = os.path.join(DONOR_PROFILE_UPLOAD_DIR, unique_name)
+    file_storage.save(target_path)
+    return f"/static/uploads/donor_profiles/{unique_name}", None
 
 
 def table_exists(cursor, table_name):
@@ -78,6 +123,10 @@ def apply_schema_extensions(cursor):
             cursor.execute(
                 "ALTER TABLE Donors ADD COLUMN availability VARCHAR(20) DEFAULT 'Available'"
             )
+        if not column_exists(cursor, 'Donors', 'address'):
+            cursor.execute("ALTER TABLE Donors ADD COLUMN address VARCHAR(255) NULL")
+        if not column_exists(cursor, 'Donors', 'profile_image_url'):
+            cursor.execute("ALTER TABLE Donors ADD COLUMN profile_image_url VARCHAR(500) NULL")
         if not column_exists(cursor, 'Donors', 'last_active_at'):
             cursor.execute("ALTER TABLE Donors ADD COLUMN last_active_at DATETIME NULL")
 
@@ -88,10 +137,238 @@ def apply_schema_extensions(cursor):
     if table_exists(cursor, 'Blood_Requests'):
         if not column_exists(cursor, 'Blood_Requests', 'urgency'):
             cursor.execute("ALTER TABLE Blood_Requests ADD COLUMN urgency VARCHAR(20) DEFAULT 'Normal'")
+        if not column_exists(cursor, 'Blood_Requests', 'created_by'):
+            cursor.execute("ALTER TABLE Blood_Requests ADD COLUMN created_by INT NULL")
+        if not column_exists(cursor, 'Blood_Requests', 'approved_by'):
+            cursor.execute("ALTER TABLE Blood_Requests ADD COLUMN approved_by INT NULL")
         if not column_exists(cursor, 'Blood_Requests', 'notes'):
             cursor.execute("ALTER TABLE Blood_Requests ADD COLUMN notes TEXT NULL")
         if not column_exists(cursor, 'Blood_Requests', 'rejection_reason'):
             cursor.execute("ALTER TABLE Blood_Requests ADD COLUMN rejection_reason TEXT NULL")
+
+
+def ensure_rbac_schema(cursor):
+    """Create RBAC tables and seed base roles/permissions if missing."""
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Roles (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        role_name VARCHAR(50) UNIQUE NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE
+    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Permissions (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        permission_name VARCHAR(100) UNIQUE NOT NULL,
+        description TEXT,
+        resource VARCHAR(50) NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Users_RBAC (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        role_id INT NOT NULL,
+        hospital_id INT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        is_locked BOOLEAN DEFAULT FALSE,
+        failed_login_attempts INT DEFAULT 0,
+        last_login DATETIME NULL,
+        password_changed_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (role_id) REFERENCES Roles(id),
+        FOREIGN KEY (hospital_id) REFERENCES Hospitals(id) ON DELETE SET NULL
+    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Role_Permissions (
+        role_id INT NOT NULL,
+        permission_id INT NOT NULL,
+        PRIMARY KEY (role_id, permission_id),
+        FOREIGN KEY (role_id) REFERENCES Roles(id) ON DELETE CASCADE,
+        FOREIGN KEY (permission_id) REFERENCES Permissions(id) ON DELETE CASCADE
+    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Audit_Logs (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        user_id INT NULL,
+        action VARCHAR(100) NOT NULL,
+        resource_type VARCHAR(50) NOT NULL,
+        resource_id INT NULL,
+        old_value JSON NULL,
+        new_value JSON NULL,
+        ip_address VARCHAR(45) NULL,
+        user_agent VARCHAR(255) NULL,
+        status VARCHAR(20) DEFAULT 'Success',
+        reason_if_denied TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES Users_RBAC(id) ON DELETE SET NULL
+    )''')
+
+    # Backfill missing columns for older RBAC schemas.
+    if table_exists(cursor, 'Roles'):
+        if not column_exists(cursor, 'Roles', 'description'):
+            cursor.execute("ALTER TABLE Roles ADD COLUMN description TEXT NULL")
+        if not column_exists(cursor, 'Roles', 'is_active'):
+            cursor.execute("ALTER TABLE Roles ADD COLUMN is_active BOOLEAN DEFAULT TRUE")
+        if not column_exists(cursor, 'Roles', 'created_at'):
+            cursor.execute("ALTER TABLE Roles ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+
+    if table_exists(cursor, 'Permissions'):
+        if not column_exists(cursor, 'Permissions', 'description'):
+            cursor.execute("ALTER TABLE Permissions ADD COLUMN description TEXT NULL")
+        if not column_exists(cursor, 'Permissions', 'resource'):
+            cursor.execute("ALTER TABLE Permissions ADD COLUMN resource VARCHAR(50) NOT NULL DEFAULT 'system'")
+        if not column_exists(cursor, 'Permissions', 'action'):
+            cursor.execute("ALTER TABLE Permissions ADD COLUMN action VARCHAR(50) NOT NULL DEFAULT 'manage'")
+        if not column_exists(cursor, 'Permissions', 'created_at'):
+            cursor.execute("ALTER TABLE Permissions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+
+    if table_exists(cursor, 'Users_RBAC'):
+        if not column_exists(cursor, 'Users_RBAC', 'is_active'):
+            cursor.execute("ALTER TABLE Users_RBAC ADD COLUMN is_active BOOLEAN DEFAULT TRUE")
+        if not column_exists(cursor, 'Users_RBAC', 'is_locked'):
+            cursor.execute("ALTER TABLE Users_RBAC ADD COLUMN is_locked BOOLEAN DEFAULT FALSE")
+        if not column_exists(cursor, 'Users_RBAC', 'failed_login_attempts'):
+            cursor.execute("ALTER TABLE Users_RBAC ADD COLUMN failed_login_attempts INT DEFAULT 0")
+        if not column_exists(cursor, 'Users_RBAC', 'last_login'):
+            cursor.execute("ALTER TABLE Users_RBAC ADD COLUMN last_login DATETIME NULL")
+        if not column_exists(cursor, 'Users_RBAC', 'password_changed_at'):
+            cursor.execute("ALTER TABLE Users_RBAC ADD COLUMN password_changed_at DATETIME NULL")
+        if not column_exists(cursor, 'Users_RBAC', 'created_at'):
+            cursor.execute("ALTER TABLE Users_RBAC ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if not column_exists(cursor, 'Users_RBAC', 'updated_at'):
+            cursor.execute("ALTER TABLE Users_RBAC ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+
+    if table_exists(cursor, 'Audit_Logs'):
+        if not column_exists(cursor, 'Audit_Logs', 'status'):
+            cursor.execute("ALTER TABLE Audit_Logs ADD COLUMN status VARCHAR(20) DEFAULT 'Success'")
+        if not column_exists(cursor, 'Audit_Logs', 'reason_if_denied'):
+            cursor.execute("ALTER TABLE Audit_Logs ADD COLUMN reason_if_denied TEXT NULL")
+
+    roles = [
+        ('SUPER_ADMIN', 'Full system override.'),
+        ('BLOOD_BANK_ADMIN', 'Manages inventory and approvals.'),
+        ('HOSPITAL_USER', 'Can create blood requests and view own requests.'),
+        ('STAFF_MEMBER', 'Operational staff for donor/donation entry.'),
+        ('DONOR', 'Can view own profile and donation history.')
+    ]
+    for role_name, description in roles:
+        cursor.execute(
+            '''
+            INSERT INTO Roles (role_name, description, is_active)
+            VALUES (%s, %s, TRUE)
+            ON DUPLICATE KEY UPDATE description = VALUES(description), is_active = TRUE
+            ''',
+            (role_name, description)
+        )
+
+    permissions = [
+        ('donor:create', 'Create new donor record', 'donors', 'create'),
+        ('donor:read', 'View donor records', 'donors', 'read'),
+        ('donor:read_self', 'View own donor profile', 'donors', 'read_self'),
+        ('donor:update', 'Update donor information', 'donors', 'update'),
+        ('donor:delete', 'Delete donor record', 'donors', 'delete'),
+        ('donation:create', 'Record new donation', 'donations', 'create'),
+        ('donation:read', 'View donation records', 'donations', 'read'),
+        ('donation:read_self', 'View own donation history', 'donations', 'read_self'),
+        ('donation:update', 'Update donation record', 'donations', 'update'),
+        ('donation:delete', 'Delete donation record', 'donations', 'delete'),
+        ('request:create', 'Create blood request', 'requests', 'create'),
+        ('request:read', 'View blood requests', 'requests', 'read'),
+        ('request:read_self', 'View own blood requests', 'requests', 'read_self'),
+        ('request:approve', 'Approve blood request', 'requests', 'approve'),
+        ('request:reject', 'Reject blood request', 'requests', 'reject'),
+        ('request:update_status', 'Update request status', 'requests', 'update_status'),
+        ('inventory:read', 'View blood inventory', 'inventory', 'read'),
+        ('inventory:update', 'Update blood inventory', 'inventory', 'update'),
+        ('inventory:manage', 'Full inventory management', 'inventory', 'manage'),
+        ('hospital:create', 'Register new hospital', 'hospitals', 'create'),
+        ('hospital:read', 'View hospital records', 'hospitals', 'read'),
+        ('hospital:update', 'Update hospital information', 'hospitals', 'update'),
+        ('hospital:approve', 'Approve hospital registration', 'hospitals', 'approve'),
+        ('hospital:delete', 'Delete hospital record', 'hospitals', 'delete'),
+        ('audit:read', 'View audit logs', 'audit', 'read'),
+        ('audit:read_self', 'View own activity logs', 'audit', 'read_self'),
+        ('admin:manage', 'Manage users and roles', 'admin', 'manage'),
+        ('users:create', 'Create user account', 'users', 'create'),
+        ('users:read', 'View user information', 'users', 'read'),
+        ('users:update', 'Update user information', 'users', 'update'),
+        ('users:delete', 'Delete user account', 'users', 'delete'),
+        ('users:assign_role', 'Assign roles to users', 'users', 'assign_role'),
+        ('system:config', 'System configuration access', 'system', 'config')
+    ]
+    for permission_name, description, resource, action in permissions:
+        cursor.execute(
+            '''
+            INSERT INTO Permissions (permission_name, description, resource, action)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                description = VALUES(description),
+                resource = VALUES(resource),
+                action = VALUES(action)
+            ''',
+            (permission_name, description, resource, action)
+        )
+
+    cursor.execute('''
+        INSERT IGNORE INTO Role_Permissions (role_id, permission_id)
+        SELECT r.id, p.id
+        FROM Roles r
+        JOIN Permissions p
+        WHERE r.role_name = 'SUPER_ADMIN'
+    ''')
+    cursor.execute('''
+        INSERT IGNORE INTO Role_Permissions (role_id, permission_id)
+        SELECT r.id, p.id
+        FROM Roles r
+        JOIN Permissions p
+        WHERE r.role_name = 'BLOOD_BANK_ADMIN'
+          AND p.permission_name IN (
+            'donor:create', 'donor:read', 'donor:update',
+            'donation:create', 'donation:read', 'donation:update',
+            'request:read', 'request:approve', 'request:reject', 'request:update_status',
+            'inventory:read', 'inventory:manage',
+            'hospital:read',
+            'audit:read'
+          )
+    ''')
+    cursor.execute('''
+        INSERT IGNORE INTO Role_Permissions (role_id, permission_id)
+        SELECT r.id, p.id
+        FROM Roles r
+        JOIN Permissions p
+        WHERE r.role_name = 'HOSPITAL_USER'
+          AND p.permission_name IN (
+            'request:create', 'request:read_self', 'inventory:read', 'hospital:read', 'audit:read_self'
+          )
+    ''')
+    cursor.execute('''
+        INSERT IGNORE INTO Role_Permissions (role_id, permission_id)
+        SELECT r.id, p.id
+        FROM Roles r
+        JOIN Permissions p
+        WHERE r.role_name = 'STAFF_MEMBER'
+          AND p.permission_name IN (
+            'donor:create', 'donor:read', 'donor:update',
+            'donation:create', 'donation:read',
+            'inventory:read', 'audit:read_self'
+          )
+    ''')
+    cursor.execute('''
+        INSERT IGNORE INTO Role_Permissions (role_id, permission_id)
+        SELECT r.id, p.id
+        FROM Roles r
+        JOIN Permissions p
+        WHERE r.role_name = 'DONOR'
+          AND p.permission_name IN (
+            'donor:read_self', 'donation:read_self', 'inventory:read', 'audit:read_self'
+          )
+    ''')
 
 # ==================== DATABASE INITIALIZATION ====================
 
@@ -130,7 +407,12 @@ def init_db():
             gender VARCHAR(20),
             blood_group VARCHAR(10) NOT NULL,
             phone VARCHAR(20) UNIQUE NOT NULL,
+            email VARCHAR(255),
+            address VARCHAR(255),
+            profile_image_url VARCHAR(500),
+            availability VARCHAR(20) DEFAULT 'Available',
             last_donation_date DATE,
+            last_active_at DATETIME NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             status VARCHAR(20) DEFAULT 'Active'
         )''')
@@ -203,6 +485,9 @@ def init_db():
                             VALUES (%s, %s, %s, %s, %s)''',
                          (username, password, email, full_name, role))
 
+        # Ensure RBAC tables/seed data exist for user management and permissions.
+        ensure_rbac_schema(cursor)
+
         # Ensure optional columns expected by advanced donor/admin features exist.
         apply_schema_extensions(cursor)
         
@@ -216,7 +501,18 @@ def init_db():
 
 def get_db():
     """Get MySQL database connection"""
-    return mysql.connector.connect(**DB_CONFIG)
+    try:
+        return mysql.connector.connect(**DB_CONFIG)
+    except Error as e:
+        app.logger.error(
+            "MySQL connection failed (host=%s, db=%s, port=%s, user=%s): %s",
+            DB_CONFIG.get('host'),
+            DB_CONFIG.get('database'),
+            DB_CONFIG.get('port'),
+            DB_CONFIG.get('user'),
+            str(e)
+        )
+        raise
 
 def dict_from_cursor(cursor, row):
     """Convert MySQL cursor result to dictionary"""
@@ -388,6 +684,56 @@ def resolve_donor_id_for_user(cursor, user_id, username, email):
         row = cursor.fetchone()
         if row:
             donor_id = row[0]
+
+    # Common bootstrap pattern: usernames like donor1, donor2, ...
+    if not donor_id and username:
+        raw_username = username.strip()
+        if raw_username.lower().startswith('donor'):
+            suffix = raw_username[5:]
+            if suffix.isdigit():
+                cursor.execute("SELECT id FROM Donors WHERE id = %s LIMIT 1", (int(suffix),))
+                row = cursor.fetchone()
+                if row:
+                    donor_id = row[0]
+
+    # Fallback: try RBAC full_name against donor name.
+    if (
+        not donor_id
+        and table_exists(cursor, 'Users_RBAC')
+        and column_exists(cursor, 'Users_RBAC', 'full_name')
+    ):
+        cursor.execute("SELECT full_name FROM Users_RBAC WHERE id = %s", (user_id,))
+        name_row = cursor.fetchone()
+        full_name = name_row[0].strip() if name_row and name_row[0] else None
+        if full_name:
+            cursor.execute("SELECT id FROM Donors WHERE name = %s LIMIT 1", (full_name,))
+            row = cursor.fetchone()
+            if row:
+                donor_id = row[0]
+
+    # Soft match: username prefix (e.g., "Jefrin" -> "Jefrin Issac"), only when unique.
+    if not donor_id and username:
+        name_token = username.strip().split()[0] if username.strip() else ''
+        if name_token:
+            cursor.execute(
+                "SELECT id FROM Donors WHERE LOWER(name) LIKE LOWER(%s) ORDER BY id LIMIT 2",
+                (f"{name_token}%",)
+            )
+            matches = cursor.fetchall() or []
+            if len(matches) == 1:
+                donor_id = matches[0][0]
+
+    # Soft match: email local-part prefix, only when unique.
+    if not donor_id and email and '@' in email:
+        local_part = email.split('@', 1)[0].strip()
+        if local_part:
+            cursor.execute(
+                "SELECT id FROM Donors WHERE LOWER(name) LIKE LOWER(%s) ORDER BY id LIMIT 2",
+                (f"{local_part}%",)
+            )
+            matches = cursor.fetchall() or []
+            if len(matches) == 1:
+                donor_id = matches[0][0]
 
     return donor_id
 
@@ -594,7 +940,7 @@ def logout():
 @app.route('/donor/profile', methods=['POST'])
 @login_required
 def update_donor_profile():
-    """Allow DONOR user to update own phone/email/availability."""
+    """Allow DONOR user to update own profile fields."""
     if session.get('role_name') != 'DONOR':
         flash('Only donor accounts can update this profile.', 'danger')
         return redirect(url_for('index'))
@@ -603,13 +949,28 @@ def update_donor_profile():
     username = session.get('username')
     phone = request.form.get('phone', '').strip()
     email = request.form.get('email', '').strip()
+    address = request.form.get('address', '').strip()
+    profile_image_url = request.form.get('profile_image_url', '').strip()
+    profile_image_file = request.files.get('profile_image')
+    remove_profile_image = request.form.get('remove_profile_image', '').lower() in ['1', 'true', 'on', 'yes']
     availability = request.form.get('availability', '').strip()
+    if not availability and request.form.get('is_available') in ['1', 'true', 'on', 'yes']:
+        availability = 'Available'
+    elif not availability and request.form.get('is_available') in ['0', 'false', 'off', 'no']:
+        availability = 'Not Available'
 
     if phone and not validate_phone(phone):
         flash('Invalid phone number.', 'danger')
         return redirect(url_for('user_mgmt.dashboard'))
     if email and not validate_email(email):
         flash('Invalid email format.', 'danger')
+        return redirect(url_for('user_mgmt.dashboard'))
+    if profile_image_url and not (
+        profile_image_url.startswith('http://')
+        or profile_image_url.startswith('https://')
+        or profile_image_url.startswith('/')
+    ):
+        flash('Profile image URL must start with http://, https://, or /.', 'danger')
         return redirect(url_for('user_mgmt.dashboard'))
     if availability and availability not in ['Available', 'Not Available']:
         flash('Invalid availability value.', 'danger')
@@ -632,6 +993,13 @@ def update_donor_profile():
 
         donors_has_email = column_exists(cursor, 'Donors', 'email')
         donors_has_availability = column_exists(cursor, 'Donors', 'availability')
+        donors_has_address = column_exists(cursor, 'Donors', 'address')
+        donors_has_profile_image_url = column_exists(cursor, 'Donors', 'profile_image_url')
+        existing_profile_image_url = None
+        if donors_has_profile_image_url:
+            cursor.execute("SELECT profile_image_url FROM Donors WHERE id = %s", (donor_id,))
+            profile_row = cursor.fetchone()
+            existing_profile_image_url = profile_row[0] if profile_row else None
 
         update_fields = []
         params = []
@@ -642,6 +1010,37 @@ def update_donor_profile():
         if donors_has_email and email:
             update_fields.append("email = %s")
             params.append(email)
+        if donors_has_address and 'address' in request.form:
+            update_fields.append("address = %s")
+            params.append(address or None)
+        if donors_has_profile_image_url:
+            next_profile_image_url = None
+            has_profile_image_update = False
+
+            if profile_image_file and profile_image_file.filename:
+                uploaded_path, upload_error = save_donor_profile_image(profile_image_file, donor_id)
+                if upload_error:
+                    conn.close()
+                    flash(upload_error, 'danger')
+                    return redirect(url_for('user_mgmt.dashboard'))
+                next_profile_image_url = uploaded_path
+                has_profile_image_update = True
+            elif remove_profile_image:
+                next_profile_image_url = None
+                has_profile_image_update = True
+            elif 'profile_image_url' in request.form:
+                # Backward compatibility with old form/input.
+                next_profile_image_url = profile_image_url or None
+                has_profile_image_update = True
+
+            if has_profile_image_update:
+                update_fields.append("profile_image_url = %s")
+                params.append(next_profile_image_url)
+                if (
+                    existing_profile_image_url
+                    and existing_profile_image_url != next_profile_image_url
+                ):
+                    remove_local_donor_profile_image(existing_profile_image_url)
         if donors_has_availability and availability:
             update_fields.append("availability = %s")
             params.append(availability)
@@ -665,6 +1064,155 @@ def update_donor_profile():
             flash(f'Error updating profile: {str(e)}', 'danger')
     except Exception as e:
         flash(f'Error updating profile: {str(e)}', 'danger')
+
+    return redirect(url_for('user_mgmt.dashboard'))
+
+
+@app.route('/donor/availability', methods=['POST'])
+@login_required
+def update_donor_availability():
+    """Toggle donor availability quickly from dashboard."""
+    if session.get('role_name') != 'DONOR':
+        flash('Only donor accounts can update availability.', 'danger')
+        return redirect(url_for('index'))
+
+    user_id = session.get('user_id')
+    username = session.get('username')
+    raw_value = request.form.get('is_available', '0')
+    availability = 'Available' if str(raw_value).strip() in ['1', 'true', 'on', 'yes'] else 'Not Available'
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT email FROM Users_RBAC WHERE id = %s", (user_id,))
+        user_row = cursor.fetchone()
+        current_email = user_row[0] if user_row else None
+
+        donor_id = resolve_donor_id_for_user(cursor, user_id, username, current_email)
+        if not donor_id:
+            conn.close()
+            flash('No linked donor profile found for this account.', 'danger')
+            return redirect(url_for('user_mgmt.dashboard'))
+
+        if not column_exists(cursor, 'Donors', 'availability'):
+            conn.close()
+            flash('Availability column is not available in current donor schema.', 'warning')
+            return redirect(url_for('user_mgmt.dashboard'))
+
+        if column_exists(cursor, 'Donors', 'last_active_at'):
+            cursor.execute(
+                "UPDATE Donors SET availability = %s, last_active_at = NOW() WHERE id = %s",
+                (availability, donor_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE Donors SET availability = %s WHERE id = %s",
+                (availability, donor_id)
+            )
+
+        conn.commit()
+        conn.close()
+        flash(
+            'Availability updated: You are now marked as available.'
+            if availability == 'Available'
+            else 'Availability updated: You are marked as not available.',
+            'success'
+        )
+    except Exception as e:
+        flash(f'Error updating availability: {str(e)}', 'danger')
+
+    return redirect(url_for('user_mgmt.dashboard'))
+
+
+@app.route('/donor/request/<int:request_id>/<action>', methods=['POST'])
+@login_required
+def donor_request_action(request_id, action):
+    """Handle donor accept/decline action for an urgent blood request card."""
+    if session.get('role_name') != 'DONOR':
+        flash('Only donor accounts can respond to donor requests.', 'danger')
+        return redirect(url_for('index'))
+
+    if action not in ['accept', 'decline']:
+        flash('Invalid action.', 'danger')
+        return redirect(url_for('user_mgmt.dashboard'))
+
+    user_id = session.get('user_id')
+    username = session.get('username')
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT email FROM Users_RBAC WHERE id = %s", (user_id,))
+        user_row = cursor.fetchone()
+        current_email = user_row[0] if user_row else None
+
+        donor_id = resolve_donor_id_for_user(cursor, user_id, username, current_email)
+        if not donor_id:
+            conn.close()
+            flash('No linked donor profile found for this account.', 'danger')
+            return redirect(url_for('user_mgmt.dashboard'))
+
+        cursor.execute("SELECT blood_group FROM Donors WHERE id = %s", (donor_id,))
+        donor_row = cursor.fetchone()
+        if not donor_row:
+            conn.close()
+            flash('Donor profile not found.', 'danger')
+            return redirect(url_for('user_mgmt.dashboard'))
+
+        donor_blood_group = donor_row[0]
+
+        cursor.execute(
+            """
+            SELECT br.id, br.status, br.blood_group, h.name
+            FROM Blood_Requests br
+            LEFT JOIN Hospitals h ON br.hospital_id = h.id
+            WHERE br.id = %s
+            LIMIT 1
+            """,
+            (request_id,)
+        )
+        request_row = cursor.fetchone()
+        if not request_row:
+            conn.close()
+            flash('Blood request not found.', 'danger')
+            return redirect(url_for('user_mgmt.dashboard'))
+
+        _, request_status, request_blood_group, hospital_name = request_row
+        if request_status != 'Pending':
+            conn.close()
+            flash('This request is no longer pending.', 'warning')
+            return redirect(url_for('user_mgmt.dashboard'))
+        if request_blood_group != donor_blood_group:
+            conn.close()
+            flash('This request does not match your blood group.', 'warning')
+            return redirect(url_for('user_mgmt.dashboard'))
+
+        if action == 'accept':
+            if column_exists(cursor, 'Donors', 'availability'):
+                if column_exists(cursor, 'Donors', 'last_active_at'):
+                    cursor.execute(
+                        "UPDATE Donors SET availability = 'Available', last_active_at = NOW() WHERE id = %s",
+                        (donor_id,)
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE Donors SET availability = 'Available' WHERE id = %s",
+                        (donor_id,)
+                    )
+            conn.commit()
+            conn.close()
+            flash(
+                f'Thank you for accepting. Please contact {hospital_name or "the hospital"} to proceed.',
+                'success'
+            )
+            return redirect(url_for('user_mgmt.dashboard'))
+
+        conn.close()
+        flash('Request declined. You can still change availability anytime.', 'warning')
+    except Exception as e:
+        flash(f'Error handling donor request: {str(e)}', 'danger')
 
     return redirect(url_for('user_mgmt.dashboard'))
 
@@ -2013,6 +2561,22 @@ def api_donors():
     return jsonify(make_serializable(donors))
 
 
+@app.route('/healthz')
+def healthz():
+    """Lightweight health check endpoint for deployment probes."""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        app.logger.error("Health check failed: %s", str(e))
+        return jsonify({'status': 'error', 'message': 'database unavailable'}), 500
+
+
 @app.route('/audit-logs')
 @login_required
 @donor_prohibited
@@ -2063,6 +2627,7 @@ def not_found(error):
 @app.errorhandler(500)
 def server_error(error):
     """Handle 500 errors"""
+    app.logger.error("Internal server error: %s", error, exc_info=True)
     return render_template('500.html'), 500
 
 @app.route('/search', methods=['GET'])

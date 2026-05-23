@@ -12,6 +12,7 @@ import mysql.connector
 from mysql.connector import Error
 import logging
 import os
+from db_config import get_db_config
 from rbac import (
     permission_required, role_required, log_audit_event, 
     get_user_permissions, get_current_user_info, user_has_permission,
@@ -25,11 +26,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DB_CONFIG = {
-    'host': os.getenv('BBMS_DB_HOST', 'localhost'),
-    'user': os.getenv('BBMS_DB_USER', 'root'),
-    'password': os.getenv('BBMS_DB_PASSWORD', 'jefrin'),
-    'database': os.getenv('BBMS_DB_NAME', 'blood_bank_db'),
-    'port': int(os.getenv('BBMS_DB_PORT', '3306'))
+    **get_db_config()
 }
 
 def get_db():

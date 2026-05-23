@@ -1,0 +1,14 @@
+node_modules
+.env
+.expo
+dist
+build
+coverage
+*.log
+
+# Python virtual environment
+venv/
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]

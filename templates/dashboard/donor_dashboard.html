@@ -1,150 +1,319 @@
 {% extends "base.html" %}
 
-{% block title %}Donor Profile{% endblock %}
+{% block title %}Donor Dashboard{% endblock %}
 
 {% block extra_css %}
 <style>
-    .donor-grid {
+    .donor-layout {
         display: grid;
         grid-template-columns: repeat(12, minmax(0, 1fr));
         gap: 14px;
     }
 
-    .span-4 { grid-column: span 4; }
-    .span-5 { grid-column: span 5; }
-    .span-7 { grid-column: span 7; }
-    .span-8 { grid-column: span 8; }
     .span-12 { grid-column: span 12; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
 
-    .panel {
+    .dash-card {
         background: #fff;
-        border: 1px solid #e7ecf3;
-        border-radius: 16px;
+        border: 1px solid #e8edf6;
+        border-radius: 18px;
         box-shadow: var(--shadow);
-        padding: 16px;
+        padding: 18px;
     }
 
-    .profile-card {
-        background: linear-gradient(145deg, #fff 0%, #fff4f6 100%);
+    .headline-card {
+        background:
+            radial-gradient(circle at top right, rgba(200, 28, 58, 0.12), transparent 34%),
+            linear-gradient(145deg, #ffffff, #fff4f6);
     }
 
-    .avatar {
-        width: 66px;
-        height: 66px;
-        border-radius: 16px;
+    .profile-shell {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .profile-identity {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 260px;
+    }
+
+    .avatar-box {
+        width: 74px;
+        height: 74px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #cf1e3f, #8f1229);
+        color: #fff;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.4rem;
-        color: #fff;
-        background: linear-gradient(135deg, #c61d3a, #9f1430);
-        margin-bottom: 12px;
+        font-size: 1.7rem;
+        border: 3px solid #fff;
+        box-shadow: 0 10px 20px rgba(200, 28, 58, 0.2);
     }
 
-    .profile-name {
-        font-size: 1.2rem;
+    .avatar-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .identity-name {
+        font-size: 1.25rem;
         font-weight: 800;
-        margin-bottom: 6px;
+        line-height: 1.1;
+        margin-bottom: 4px;
     }
 
-    .detail {
+    .identity-sub {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .identity-grid {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+        gap: 8px 14px;
+    }
+
+    .identity-item {
         display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        border-bottom: 1px dashed #e6ebf2;
-        padding: 8px 0;
+        align-items: center;
+        gap: 8px;
         font-size: 0.92rem;
     }
 
-    .detail:last-child {
-        border-bottom: none;
+    .identity-item i {
+        width: 18px;
+        color: #c81c3a;
     }
 
-    .detail span:first-child {
-        color: var(--muted);
-    }
-
-    .detail span:last-child {
-        font-weight: 700;
-    }
-
-    .action-row {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 12px;
-    }
-
-    .small-kpi {
-        border: 1px solid #e8edf5;
-        border-radius: 14px;
-        padding: 12px;
-        background: #fff;
-    }
-
-    .small-kpi .k {
-        color: var(--muted);
-        text-transform: uppercase;
-        font-size: 0.76rem;
-        font-weight: 700;
-        letter-spacing: 0.3px;
-    }
-
-    .small-kpi .v {
-        font-size: 1.4rem;
+    .blood-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(200, 28, 58, 0.12);
+        color: #97132c;
         font-weight: 800;
-    }
-
-    .eligibility-ok {
-        background: rgba(21, 153, 71, 0.15);
-        color: #0d6b31;
-        border: 1px solid rgba(21, 153, 71, 0.28);
-        padding: 11px 12px;
-        border-radius: 11px;
-        font-weight: 700;
-    }
-
-    .eligibility-wait {
-        background: rgba(245, 158, 11, 0.16);
-        color: #7a4b00;
-        border: 1px solid rgba(245, 158, 11, 0.33);
-        padding: 11px 12px;
-        border-radius: 11px;
-        font-weight: 700;
-    }
-
-    .table thead th {
         font-size: 0.78rem;
     }
 
-    .mobile-preview {
-        border: 1px solid #e8edf5;
-        border-radius: 14px;
-        background: #f9fbff;
-        padding: 10px;
-    }
-
-    .mobile-preview h6 {
-        font-size: 0.9rem;
-        margin-bottom: 8px;
-    }
-
-    .mobile-preview ul {
-        list-style: none;
+    .status-row {
         display: grid;
-        gap: 6px;
-        margin: 0;
-        padding: 0;
-        font-size: 0.84rem;
+        gap: 10px;
+    }
+
+    .status-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px dashed #e4eaf3;
+        border-radius: 12px;
+        padding: 10px 12px;
+    }
+
+    .status-line strong {
+        color: #1a2a3a;
+    }
+
+    .eligibility-badge {
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-weight: 700;
+        border: 1px solid transparent;
+        margin-top: 10px;
+    }
+
+    .eligible {
+        background: rgba(21, 153, 71, 0.14);
+        color: #0d6b31;
+        border-color: rgba(21, 153, 71, 0.3);
+    }
+
+    .not-eligible {
+        background: rgba(220, 38, 38, 0.14);
+        color: #7f1d1d;
+        border-color: rgba(220, 38, 38, 0.28);
+    }
+
+    .availability-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .availability-title {
+        font-weight: 800;
+        font-size: 1.04rem;
+    }
+
+    .availability-help {
+        margin-top: 4px;
         color: var(--muted);
+        font-size: 0.9rem;
+    }
+
+    .switch-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #fff5f7;
+        border: 1px solid #f5d5dc;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-weight: 700;
+        color: #8e2231;
+    }
+
+    .form-switch .form-check-input {
+        width: 3rem;
+        height: 1.4rem;
+        margin-top: 0;
+        cursor: pointer;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .stat-card {
+        border: 1px solid #e7edf6;
+        border-radius: 14px;
+        padding: 14px;
+        background: #fff;
+    }
+
+    .stat-head {
+        color: #6a7c92;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-weight: 700;
+    }
+
+    .stat-value {
+        margin-top: 5px;
+        font-size: 1.55rem;
+        font-weight: 800;
+        color: #112233;
+    }
+
+    .request-item {
+        border: 1px solid #e9eef6;
+        border-radius: 13px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #fff;
+    }
+
+    .request-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .request-item.urgent {
+        background: #fff5f5;
+        border-color: #f3c8cf;
+    }
+
+    .request-text {
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .request-meta {
+        color: var(--muted);
+        font-size: 0.88rem;
+        margin-bottom: 10px;
+    }
+
+    .request-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-accept {
+        background: #159947;
+        color: #fff;
+        border: none;
+    }
+
+    .btn-accept:hover {
+        background: #11803c;
+        color: #fff;
+    }
+
+    .btn-decline {
+        background: #fbe9ed;
+        color: #a01c35;
+        border: 1px solid #efc9d1;
+    }
+
+    .section-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-weight: 800;
+        font-size: 1.04rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 18px;
+        border: 1px dashed #dbe4f0;
+        border-radius: 12px;
+        color: #68798f;
+        font-weight: 600;
+        background: #fbfdff;
+    }
+
+    .action-strip {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .reveal {
+        opacity: 0;
+        transform: translateY(8px);
+        animation: fadeUp 0.45s ease forwards;
+    }
+
+    @keyframes fadeUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     @media (max-width: 1080px) {
-        .span-4,
-        .span-5,
-        .span-7,
-        .span-8 {
+        .span-6,
+        .span-4 {
             grid-column: span 12;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .identity-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -152,150 +321,196 @@
 
 {% block content %}
 <div class="page-header">
-    <div class="page-title"><i class="fas fa-id-card"></i> Donor Profile</div>
-    <a class="btn btn-outline-primary btn-sm" href="/change-password">Change Password</a>
+    <div class="page-title"><i class="fas fa-hand-holding-heart"></i> Donor Dashboard</div>
+    <a class="btn btn-outline-primary btn-sm" href="/change-password"><i class="fas fa-key me-1"></i> Change Password</a>
 </div>
 
 <div class="container-fluid px-0">
     {% if dashboard_data.error %}
     <div class="alert alert-warning">{{ dashboard_data.error }}</div>
     {% else %}
-    <div class="donor-grid">
-        <section class="panel profile-card span-4">
-            <div class="avatar"><i class="fas fa-user"></i></div>
-            <div class="profile-name">{{ dashboard_data.profile.full_name }}</div>
-            <div class="detail"><span>Blood Group</span><span>{{ dashboard_data.profile.blood_group }}</span></div>
-            <div class="detail"><span>Age</span><span>{{ dashboard_data.profile.age }}</span></div>
-            <div class="detail"><span>Phone</span><span>{{ dashboard_data.profile.phone }}</span></div>
-            <div class="detail"><span>Last Donation</span><span>{{ dashboard_data.summary.last_donation_date|strftime('%d %b %Y') if dashboard_data.summary.last_donation_date else 'Never' }}</span></div>
-            <div class="detail">
-                <span>Eligibility</span>
-                <span>{{ 'Eligible' if dashboard_data.summary.is_eligible else 'Waiting Period' }}</span>
-            </div>
-            <div class="action-row">
-                <a class="btn btn-primary btn-sm" href="#profileForm">Edit Profile</a>
-                <a class="btn btn-outline-primary btn-sm" href="#historyTable">Donation History</a>
-                <a class="btn btn-outline-danger btn-sm" href="#trendPanel">Request Donation</a>
-            </div>
-        </section>
-
-        <section class="panel span-8">
-            <div class="row g-3 mb-3">
-                <div class="col-md-3">
-                    <div class="small-kpi">
-                        <div class="k">Total Donations</div>
-                        <div class="v">{{ dashboard_data.summary.total_donations }}</div>
+    <div class="donor-layout">
+        <section class="dash-card headline-card span-12 reveal">
+            <div class="profile-shell">
+                <div class="profile-identity">
+                    <div class="avatar-box">
+                        {% if dashboard_data.profile.profile_image_url %}
+                        <img src="{{ dashboard_data.profile.profile_image_url }}" alt="Donor profile photo">
+                        {% else %}
+                        <i class="fas fa-user"></i>
+                        {% endif %}
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="small-kpi">
-                        <div class="k">Units Donated</div>
-                        <div class="v">{{ dashboard_data.summary.total_units_donated }}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="small-kpi">
-                        <div class="k">Current Status</div>
-                        <div class="v" style="font-size: 1rem;">
-                            {% if dashboard_data.profile.status == 'Active' %}
-                            <span class="badge bg-success">Active</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Inactive</span>
-                            {% endif %}
+                    <div>
+                        <div class="identity-name">👤 {{ dashboard_data.profile.full_name or 'Donor' }}</div>
+                        <div class="identity-sub">Welcome back, your donor profile is active.</div>
+                        <div class="identity-grid">
+                            <div class="identity-item"><i class="fas fa-droplet"></i> <span class="blood-pill">🩸 {{ dashboard_data.profile.blood_group }}</span></div>
+                            <div class="identity-item"><i class="fas fa-phone"></i> <span>📞 {{ dashboard_data.profile.phone or 'Not provided' }}</span></div>
+                            <div class="identity-item"><i class="fas fa-location-dot"></i> <span>📍 {{ dashboard_data.profile.address or 'Not provided' }}</span></div>
+                            <div class="identity-item"><i class="fas fa-circle-check"></i> <span>{{ dashboard_data.profile.availability }}</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="small-kpi">
-                        <div class="k">Availability</div>
-                        <div class="v" style="font-size: 1rem;">{{ dashboard_data.profile.availability }}</div>
-                    </div>
+
+                <div>
+                    <a class="btn btn-primary" href="#profileForm"><i class="fas fa-user-pen me-1"></i> Edit Profile</a>
                 </div>
             </div>
+        </section>
 
+        <section class="dash-card span-6 reveal">
+            <div class="section-head"><i class="fas fa-calendar-check text-danger"></i> Donation Status</div>
+            <div class="status-row">
+                <div class="status-line">
+                    <span>Last Donation</span>
+                    <strong>{{ dashboard_data.summary.last_donation_date|strftime('%d %b %Y') if dashboard_data.summary.last_donation_date else 'No previous donation' }}</strong>
+                </div>
+                <div class="status-line">
+                    <span>Next Eligible Date</span>
+                    <strong>{{ dashboard_data.summary.next_eligible_date|strftime('%d %b %Y') if dashboard_data.summary.next_eligible_date else 'Eligible Now' }}</strong>
+                </div>
+            </div>
             {% if dashboard_data.summary.is_eligible %}
-            <div class="eligibility-ok">Eligible now: You can donate blood today.</div>
+            <div class="eligibility-badge eligible">✅ Eligible to Donate</div>
             {% else %}
-            <div class="eligibility-wait">
-                Next eligible date: {{ dashboard_data.summary.next_eligible_date|strftime('%d %B %Y') }}
-            </div>
-            {% endif %}
-
-            {% if dashboard_data.alerts.urgent_need %}
-            <div class="alert alert-danger mt-3 mb-0">
-                <i class="fas fa-triangle-exclamation me-2"></i>{{ dashboard_data.alerts.message }}
-            </div>
+            <div class="eligibility-badge not-eligible">❌ Not Eligible</div>
             {% endif %}
         </section>
 
-        <section class="panel span-7" id="historyTable">
-            <h5 class="mb-3"><i class="fas fa-clock-rotate-left me-2 text-danger"></i>Donation History</h5>
+        <section class="dash-card span-6 reveal">
+            <div class="section-head"><i class="fas fa-toggle-on text-danger"></i> Request to Donate / Availability</div>
+            <div class="availability-box">
+                <div>
+                    <div class="availability-title">[ I am Available to Donate ]</div>
+                    <div class="availability-help">Turn this on so hospitals/admin can find active donors quickly.</div>
+                </div>
+                <form method="POST" action="/donor/availability" id="availabilityForm" class="form-switch m-0">
+                    <input type="hidden" name="is_available" id="isAvailableValue" value="{{ 1 if dashboard_data.profile.is_available else 0 }}">
+                    <label class="switch-wrap" for="availabilityToggle">
+                        <input class="form-check-input" type="checkbox" id="availabilityToggle" {% if dashboard_data.profile.is_available %}checked{% endif %}>
+                        <span id="availabilityLabel">{{ 'Available' if dashboard_data.profile.is_available else 'Not Available' }}</span>
+                    </label>
+                </form>
+            </div>
+        </section>
+
+        <section class="dash-card span-12 reveal">
+            <div class="section-head"><i class="fas fa-chart-simple text-danger"></i> Quick Stats</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-head">Total Donations</div>
+                    <div class="stat-value">{{ dashboard_data.summary.total_donations }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-head">Lives Saved</div>
+                    <div class="stat-value">{{ dashboard_data.summary.lives_saved }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-head">Last Donation</div>
+                    <div class="stat-value" style="font-size: 1.1rem;">{{ dashboard_data.summary.last_donation_label }}</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="dash-card span-12 reveal" id="donationHistory">
+            <div class="section-head"><i class="fas fa-clock-rotate-left text-danger"></i> Donation History</div>
             <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Units</th>
-                            <th>Health Status</th>
-                            <th>Location</th>
+                            <th>Hospital</th>
+                            <th>Units Donated</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if dashboard_data.donation_history %}
-                            {% for d in dashboard_data.donation_history %}
+                            {% for item in dashboard_data.donation_history %}
                             <tr>
-                                <td>{{ d.donation_date|strftime('%d/%m/%Y') }}</td>
-                                <td>{{ d.units }}</td>
-                                <td>{{ d.health_status or '-' }}</td>
-                                <td>{{ d.location }}</td>
+                                <td>{{ item.donation_date|strftime('%d %b %Y') }}</td>
+                                <td>{{ item.hospital }}</td>
+                                <td>{{ item.units }}</td>
+                                <td><span class="status-badge approved">{{ item.status }}</span></td>
                             </tr>
                             {% endfor %}
                         {% else %}
-                            <tr><td colspan="4" class="text-center text-muted py-3">No donation history yet.</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No donations recorded yet.</td>
+                            </tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <section class="panel span-5" id="trendPanel">
-            <h5 class="mb-3"><i class="fas fa-chart-line me-2 text-danger"></i>Donation Trend</h5>
-            <canvas id="donorTrendChart" height="140"></canvas>
-            <div class="mobile-preview mt-3">
-                <h6>Mobile Quick Actions</h6>
-                <ul>
-                    <li><i class="fas fa-droplet text-danger me-1"></i> Find Blood</li>
-                    <li><i class="fas fa-user-plus text-danger me-1"></i> Register as Donor</li>
-                    <li><i class="fas fa-bell text-danger me-1"></i> Emergency Request</li>
-                    <li><i class="fas fa-location-dot text-danger me-1"></i> Nearby Donors</li>
-                </ul>
-            </div>
+        <section class="dash-card span-12 reveal">
+            <div class="section-head"><i class="fas fa-bell text-danger"></i> Notifications / Requests</div>
+            {% if dashboard_data.notifications %}
+                {% for note in dashboard_data.notifications %}
+                <div class="request-item {% if note.is_urgent %}urgent{% endif %}">
+                    <div class="request-text">⚠ {{ note.message }}</div>
+                    <div class="request-meta">
+                        {{ note.blood_group }} • {{ note.units_required }} units • {{ note.hospital_name }}
+                        {% if note.request_date %} • {{ note.request_date|strftime('%d %b %Y') }}{% endif %}
+                    </div>
+                    <div class="request-actions">
+                        <form method="POST" action="/donor/request/{{ note.request_id }}/accept">
+                            <button type="submit" class="btn btn-sm btn-accept"><i class="fas fa-check me-1"></i> Accept</button>
+                        </form>
+                        <form method="POST" action="/donor/request/{{ note.request_id }}/decline">
+                            <button type="submit" class="btn btn-sm btn-decline"><i class="fas fa-xmark me-1"></i> Decline</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">No active blood requests matching your blood group right now.</div>
+            {% endif %}
         </section>
 
-        <section class="panel span-12" id="profileForm">
-            <h5 class="mb-3"><i class="fas fa-user-gear me-2 text-danger"></i>Update Contact & Availability</h5>
-            <form method="POST" action="/donor/profile">
+        <section class="dash-card span-12 reveal" id="profileForm">
+            <div class="section-head"><i class="fas fa-user-gear text-danger"></i> Update Profile</div>
+            <form method="POST" action="/donor/profile" enctype="multipart/form-data">
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Phone</label>
-                        <input class="form-control" name="phone" value="{{ dashboard_data.profile.phone }}" required>
+                        <input class="form-control" name="phone" value="{{ dashboard_data.profile.phone or '' }}" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Email</label>
                         <input class="form-control" type="email" name="email" value="{{ dashboard_data.profile.email or '' }}">
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Availability</label>
-                        <select class="form-select" name="availability">
-                            <option value="Available" {% if dashboard_data.profile.availability == 'Available' %}selected{% endif %}>Available</option>
-                            <option value="Not Available" {% if dashboard_data.profile.availability == 'Not Available' %}selected{% endif %}>Not Available</option>
-                        </select>
+                    <div class="col-md-3">
+                        <label class="form-label">Address</label>
+                        <input class="form-control" name="address" value="{{ dashboard_data.profile.address if dashboard_data.profile.address != 'Not provided' else '' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Upload Profile Picture (optional)</label>
+                        <input class="form-control" type="file" name="profile_image" accept=".png,.jpg,.jpeg,.gif,.webp,image/*">
+                        {% if dashboard_data.profile.profile_image_url %}
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" value="1" id="removeProfileImage" name="remove_profile_image">
+                            <label class="form-check-label" for="removeProfileImage">
+                                Remove current profile image
+                            </label>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="mt-3">
-                    <button class="btn btn-primary" type="submit">Save Profile</button>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-floppy-disk me-1"></i> Save Profile</button>
                 </div>
             </form>
+        </section>
+
+        <section class="dash-card span-12 reveal">
+            <div class="section-head"><i class="fas fa-bolt text-danger"></i> Actions</div>
+            <div class="action-strip">
+                <a class="btn btn-primary" href="#profileForm"><i class="fas fa-user-pen me-1"></i> Update Profile</a>
+                <a class="btn btn-outline-primary" href="#donationHistory"><i class="fas fa-table-list me-1"></i> View History</a>
+                <a class="btn btn-outline-danger" href="/logout"><i class="fas fa-right-from-bracket me-1"></i> Logout</a>
+            </div>
         </section>
     </div>
     {% endif %}
@@ -305,35 +520,23 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const canvas = document.getElementById("donorTrendChart");
-    if (!canvas) return;
-    const labels = {{ dashboard_data.trend.labels | tojson }};
-    const units = {{ dashboard_data.trend.units | tojson }};
-    if (!labels.length) return;
-
-    new Chart(canvas, {
-        type: "line",
-        data: {
-            labels: labels,
-            datasets: [{
-                label: "Units Donated",
-                data: units,
-                borderColor: "#c61d3a",
-                backgroundColor: "rgba(198,29,58,0.14)",
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                pointBackgroundColor: "#c61d3a"
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#edf1f7" } },
-                x: { grid: { display: false } }
-            }
-        }
+    const cards = document.querySelectorAll(".reveal");
+    cards.forEach(function (card, index) {
+        card.style.animationDelay = (index * 0.05) + "s";
     });
+
+    const toggle = document.getElementById("availabilityToggle");
+    const hidden = document.getElementById("isAvailableValue");
+    const label = document.getElementById("availabilityLabel");
+    const form = document.getElementById("availabilityForm");
+
+    if (toggle && hidden && label && form) {
+        toggle.addEventListener("change", function () {
+            hidden.value = toggle.checked ? "1" : "0";
+            label.textContent = toggle.checked ? "Available" : "Not Available";
+            form.submit();
+        });
+    }
 });
 </script>
 {% endblock %}

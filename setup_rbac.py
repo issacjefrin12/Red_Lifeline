@@ -6,13 +6,11 @@ Run this after running rbac_schema.sql to populate test data
 
 import mysql.connector
 from mysql.connector import Error
+import os
+from db_config import get_db_config
 
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'jefrin',  # CHANGE TO YOUR PASSWORD
-    'database': 'blood_bank_db',
-    'port': 3306
+    **get_db_config()
 }
 
 def create_test_users():

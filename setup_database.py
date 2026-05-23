@@ -7,12 +7,16 @@ This script creates the database and tables automatically
 import mysql.connector
 from mysql.connector import Error
 import sys
+import os
+from db_config import get_db_config
 
 # Database credentials
-DB_HOST = 'localhost'
-DB_USER = 'root'
-DB_PASSWORD = 'jefrin'  # Default password - change if needed
-DB_NAME = 'blood_bank_db'
+_CFG = get_db_config()
+DB_HOST = _CFG["host"]
+DB_USER = _CFG["user"]
+DB_PASSWORD = _CFG["password"]
+DB_NAME = _CFG["database"]
+DB_PORT = _CFG["port"]
 
 def run_sql_file(connection, filepath):
     """Execute SQL commands from a file"""
@@ -52,8 +56,8 @@ def main():
     print("🩸 Blood Bank Management System - Database Setup")
     print("="*70)
     
-    # Try multiple password options
-    passwords_to_try = ['jefrin', 'root', 'password', '123456', 'mysql']
+    # If password is configured, use only that. Otherwise try common local defaults.
+    passwords_to_try = [DB_PASSWORD] if DB_PASSWORD else ['', 'root', 'password', 'Jefrin', 'mysql']
     
     connection = None
     
@@ -67,7 +71,8 @@ def main():
                 connection = mysql.connector.connect(
                     host=DB_HOST,
                     user=DB_USER,
-                    password=password_attempt
+                    password=password_attempt,
+                    port=DB_PORT
                 )
                 print("✅ Connected to MySQL!")
                 
@@ -80,9 +85,8 @@ def main():
                     print("\n✅ Database setup successful!")
                     print("\n" + "="*70)
                     print("Next steps:")
-                    print(f"  1. Update password in app.py line 20: DB_PASSWORD = '{password_attempt}'")
-                    print("  2. Run: python app.py")
-                    print("  3. Open: http://localhost:5000")
+                    print("  1. Confirm DB_* env vars are set in your deploy platform")
+                    print("  2. Restart your web service")
                     print("="*70)
                     return True
                 else:
@@ -100,8 +104,8 @@ def main():
             if connection and connection.is_connected():
                 connection.close()
     
-    print("\n❌ Could not connect to MySQL with any default password")
-    print("   Please ensure MySQL is running and check your credentials")
+    print("\n❌ Could not connect to MySQL with provided configuration")
+    print("   Check DB host/user/password/database/port values and network access")
     return False
 
 if __name__ == '__main__':

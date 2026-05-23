@@ -28,6 +28,7 @@ import os
 import mysql.connector
 from flask import Blueprint, request, jsonify, session
 from datetime import datetime
+from db_config import get_db_config
 from transaction_lock_handler import (
     approve_blood_request,
     InsufficientStockError,
@@ -48,11 +49,7 @@ logging.basicConfig(
 transaction_bp = Blueprint('transactions', __name__, url_prefix='/api')
 
 DB_CONFIG = {
-    'host': os.getenv('BBMS_DB_HOST', 'localhost'),
-    'user': os.getenv('BBMS_DB_USER', 'root'),
-    'password': os.getenv('BBMS_DB_PASSWORD', 'jefrin'),
-    'database': os.getenv('BBMS_DB_NAME', 'blood_bank_db'),
-    'port': int(os.getenv('BBMS_DB_PORT', '3306'))
+    **get_db_config()
 }
 
 # ==================== HELPER FUNCTIONS ====================

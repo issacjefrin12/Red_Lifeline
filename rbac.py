@@ -12,17 +12,14 @@ from datetime import datetime
 import json
 import logging
 import os
+from db_config import get_db_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DB_CONFIG = {
-    'host': os.getenv('BBMS_DB_HOST', 'localhost'),
-    'user': os.getenv('BBMS_DB_USER', 'root'),
-    'password': os.getenv('BBMS_DB_PASSWORD', 'jefrin'),
-    'database': os.getenv('BBMS_DB_NAME', 'blood_bank_db'),
-    'port': int(os.getenv('BBMS_DB_PORT', '3306'))
+    **get_db_config()
 }
 
 # ==================== PERMISSION CACHE ====================

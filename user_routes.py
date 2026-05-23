@@ -372,12 +372,14 @@ def dashboard():
             template_name = template_map.get(role_name, 'dashboard/default_dashboard.html')
 
             # Fallback gracefully when dashboard query and current DB schema are out of sync.
+            # Keep DONOR on donor dashboard so the custom page still renders its own error state.
             if isinstance(dashboard_data, dict) and dashboard_data.get('error'):
                 flash(
-                    f'{role_name} dashboard is unavailable with current database schema: {dashboard_data["error"]}',
+                    f'{role_name} dashboard issue: {dashboard_data["error"]}',
                     'warning'
                 )
-                template_name = 'dashboard/default_dashboard.html'
+                if role_name != 'DONOR':
+                    template_name = 'dashboard/default_dashboard.html'
             
             return render_template(
                 template_name,

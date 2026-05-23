@@ -18,17 +18,14 @@ from datetime import datetime, date, timedelta
 import logging
 import os
 from typing import Tuple, Dict, List, Optional
+from db_config import get_db_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DB_CONFIG = {
-    'host': os.getenv('BBMS_DB_HOST', 'localhost'),
-    'user': os.getenv('BBMS_DB_USER', 'root'),
-    'password': os.getenv('BBMS_DB_PASSWORD', 'jefrin'),
-    'database': os.getenv('BBMS_DB_NAME', 'blood_bank_db'),
-    'port': int(os.getenv('BBMS_DB_PORT', '3306'))
+    **get_db_config()
 }
 
 BLOOD_GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']
@@ -171,9 +168,11 @@ class UserManager:
                 return False, "User already exists with this email or username", None
             
             # Validate role exists
-            cursor.execute("SELECT id FROM Roles WHERE id = %s", (role_id,))
-            if not cursor.fetchone():
+            cursor.execute("SELECT id, role_name FROM Roles WHERE id = %s", (role_id,))
+            role_row = cursor.fetchone()
+            if not role_row:
                 return False, "Invalid role ID", None
+            role_name = role_row[1]
             
             # Insert user
             cursor.execute("""
@@ -181,13 +180,109 @@ class UserManager:
                 (username, email, password_hash, role_id, hospital_id, is_active, created_at, created_by)
                 VALUES (%s, %s, %s, %s, %s, TRUE, NOW(), %s)
             """, (username, email, password_hash, role_id, hospital_id, created_by_user_id))
-            
-            conn.commit()
             user_id = cursor.lastrowid
+
+            donor_profile_auto_created = False
+
+            # For DONOR users, auto-link (or auto-create) donor profile to prevent dashboard-link issues.
+            if (
+                role_name == 'DONOR'
+                and column_exists(cursor, 'Users_RBAC', 'donor_id')
+                and table_exists(cursor, 'Donors')
+            ):
+                donor_id = None
+                donors_has_email = column_exists(cursor, 'Donors', 'email')
+
+                if donors_has_email and email:
+                    cursor.execute("SELECT id FROM Donors WHERE email = %s LIMIT 1", (email,))
+                    row = cursor.fetchone()
+                    if row:
+                        donor_id = row[0]
+
+                if not donor_id and username:
+                    cursor.execute("SELECT id FROM Donors WHERE name = %s LIMIT 1", (username,))
+                    row = cursor.fetchone()
+                    if row:
+                        donor_id = row[0]
+
+                if not donor_id and username and username.lower().startswith('donor'):
+                    suffix = username[5:]
+                    if suffix.isdigit():
+                        cursor.execute("SELECT id FROM Donors WHERE id = %s LIMIT 1", (int(suffix),))
+                        row = cursor.fetchone()
+                        if row:
+                            donor_id = row[0]
+
+                if not donor_id and username:
+                    token = username.strip().split()[0] if username.strip() else ''
+                    if token:
+                        cursor.execute(
+                            "SELECT id FROM Donors WHERE LOWER(name) LIKE LOWER(%s) ORDER BY id LIMIT 2",
+                            (f"{token}%",)
+                        )
+                        rows = cursor.fetchall() or []
+                        if len(rows) == 1:
+                            donor_id = rows[0][0]
+
+                if not donor_id and email and '@' in email:
+                    local_part = email.split('@', 1)[0].strip()
+                    if local_part:
+                        cursor.execute(
+                            "SELECT id FROM Donors WHERE LOWER(name) LIKE LOWER(%s) ORDER BY id LIMIT 2",
+                            (f"{local_part}%",)
+                        )
+                        rows = cursor.fetchall() or []
+                        if len(rows) == 1:
+                            donor_id = rows[0][0]
+
+                if not donor_id:
+                    # Create a minimal donor profile if no matching donor exists.
+                    phone_number = str(9900000000 + int(user_id))
+                    while True:
+                        cursor.execute("SELECT id FROM Donors WHERE phone = %s LIMIT 1", (phone_number,))
+                        if not cursor.fetchone():
+                            break
+                        phone_number = str(int(phone_number) + 1000)
+
+                    donor_columns = ['name', 'age', 'blood_group', 'phone']
+                    donor_values = [username, 21, 'O+', phone_number]
+
+                    if column_exists(cursor, 'Donors', 'gender'):
+                        donor_columns.append('gender')
+                        donor_values.append('Not Specified')
+                    if donors_has_email:
+                        donor_columns.append('email')
+                        donor_values.append(email or None)
+                    if column_exists(cursor, 'Donors', 'address'):
+                        donor_columns.append('address')
+                        donor_values.append(None)
+                    if column_exists(cursor, 'Donors', 'availability'):
+                        donor_columns.append('availability')
+                        donor_values.append('Available')
+                    if column_exists(cursor, 'Donors', 'status'):
+                        donor_columns.append('status')
+                        donor_values.append('Active')
+
+                    placeholders = ", ".join(["%s"] * len(donor_values))
+                    cursor.execute(
+                        f"INSERT INTO Donors ({', '.join(donor_columns)}) VALUES ({placeholders})",
+                        tuple(donor_values)
+                    )
+                    donor_id = cursor.lastrowid
+                    donor_profile_auto_created = True
+
+                cursor.execute(
+                    "UPDATE Users_RBAC SET donor_id = %s WHERE id = %s",
+                    (donor_id, user_id)
+                )
+
+            conn.commit()
             cursor.close()
             conn.close()
             
             logger.info(f"User created: {username} (ID: {user_id}) with role_id: {role_id}")
+            if donor_profile_auto_created:
+                return True, f"User '{username}' created successfully (donor profile auto-created and linked)", user_id
             return True, f"User '{username}' created successfully", user_id
             
         except Error as e:
@@ -982,15 +1077,20 @@ class DashboardManager:
     def get_donor_dashboard(user_id: int) -> Dict:
         """
         DONOR Dashboard
-        Shows: Personal profile, donation summary, eligibility, history, and alerts
+        Shows: Personal profile, eligibility status, availability, history, and request alerts
         """
         try:
             conn = get_db()
             cursor = conn.cursor(dictionary=True)
 
             # 1) Resolve logged-in user
+            users_has_full_name = column_exists(cursor, 'Users_RBAC', 'full_name')
+            user_select_fields = "id, username, email"
+            if users_has_full_name:
+                user_select_fields += ", full_name"
+
             cursor.execute(
-                "SELECT id, username, email FROM Users_RBAC WHERE id = %s",
+                f"SELECT {user_select_fields} FROM Users_RBAC WHERE id = %s",
                 (user_id,)
             )
             user = cursor.fetchone()
@@ -1001,15 +1101,19 @@ class DashboardManager:
 
             donors_has_email = column_exists(cursor, 'Donors', 'email')
             donors_has_availability = column_exists(cursor, 'Donors', 'availability')
+            donors_has_address = column_exists(cursor, 'Donors', 'address')
+            donors_has_profile_image_url = column_exists(cursor, 'Donors', 'profile_image_url')
             users_has_donor_id = column_exists(cursor, 'Users_RBAC', 'donor_id')
 
             # 2) Resolve donor profile linked to this user
             donor_id = None
+            linked_donor_id = None
             if users_has_donor_id:
                 cursor.execute("SELECT donor_id FROM Users_RBAC WHERE id = %s", (user_id,))
                 donor_link = cursor.fetchone()
                 if donor_link and donor_link.get('donor_id'):
                     donor_id = donor_link['donor_id']
+                    linked_donor_id = donor_id
 
             if not donor_id and donors_has_email and user.get('email'):
                 cursor.execute("SELECT id FROM Donors WHERE email = %s LIMIT 1", (user['email'],))
@@ -1022,6 +1126,60 @@ class DashboardManager:
                 by_name = cursor.fetchone()
                 if by_name:
                     donor_id = by_name['id']
+
+            # Common bootstrap pattern: usernames like donor1, donor2, ...
+            if not donor_id and user.get('username'):
+                raw_username = str(user.get('username')).strip()
+                if raw_username.lower().startswith('donor'):
+                    suffix = raw_username[5:]
+                    if suffix.isdigit():
+                        cursor.execute("SELECT id FROM Donors WHERE id = %s LIMIT 1", (int(suffix),))
+                        by_id = cursor.fetchone()
+                        if by_id:
+                            donor_id = by_id['id']
+
+            # Fallback to full_name match if available.
+            if not donor_id and users_has_full_name and user.get('full_name'):
+                cursor.execute("SELECT id FROM Donors WHERE name = %s LIMIT 1", (user['full_name'],))
+                by_full_name = cursor.fetchone()
+                if by_full_name:
+                    donor_id = by_full_name['id']
+
+            # Soft match by username prefix (unique only), e.g. "Jefrin" -> "Jefrin Issac".
+            if not donor_id and user.get('username'):
+                name_token = str(user.get('username')).strip().split()[0] if str(user.get('username')).strip() else ''
+                if name_token:
+                    cursor.execute(
+                        """
+                        SELECT id
+                        FROM Donors
+                        WHERE LOWER(name) LIKE LOWER(%s)
+                        ORDER BY id
+                        LIMIT 2
+                        """,
+                        (f"{name_token}%",)
+                    )
+                    token_matches = cursor.fetchall() or []
+                    if len(token_matches) == 1:
+                        donor_id = token_matches[0]['id']
+
+            # Soft match by email local-part prefix (unique only).
+            if not donor_id and user.get('email') and '@' in str(user.get('email')):
+                local_part = str(user.get('email')).split('@', 1)[0].strip()
+                if local_part:
+                    cursor.execute(
+                        """
+                        SELECT id
+                        FROM Donors
+                        WHERE LOWER(name) LIKE LOWER(%s)
+                        ORDER BY id
+                        LIMIT 2
+                        """,
+                        (f"{local_part}%",)
+                    )
+                    email_matches = cursor.fetchall() or []
+                    if len(email_matches) == 1:
+                        donor_id = email_matches[0]['id']
 
             if not donor_id:
                 cursor.close()
@@ -1040,6 +1198,10 @@ class DashboardManager:
                 donor_select_fields += ", d.email"
             if donors_has_availability:
                 donor_select_fields += ", d.availability"
+            if donors_has_address:
+                donor_select_fields += ", d.address"
+            if donors_has_profile_image_url:
+                donor_select_fields += ", d.profile_image_url"
 
             cursor.execute(
                 f"SELECT {donor_select_fields} FROM Donors d WHERE d.id = %s",
@@ -1055,6 +1217,10 @@ class DashboardManager:
             donor_availability = donor.get('availability') if donors_has_availability else (
                 'Available' if donor.get('status') == 'Active' else 'Not Available'
             )
+            donor_address = donor.get('address') if donors_has_address else None
+            donor_profile_image_url = donor.get('profile_image_url') if donors_has_profile_image_url else None
+            is_available = donor_availability == 'Available'
+            donor_blood_group = donor.get('blood_group')
 
             # 3) Donation summary (90-day eligibility rule)
             cursor.execute(
@@ -1080,53 +1246,144 @@ class DashboardManager:
                 next_eligible_date = None
                 is_eligible = True
 
+            # Persist donor link for future lookups when possible.
+            if users_has_donor_id and donor_id and not linked_donor_id:
+                cursor.execute(
+                    """
+                    UPDATE Users_RBAC
+                    SET donor_id = %s
+                    WHERE id = %s AND (donor_id IS NULL OR donor_id = 0)
+                    """,
+                    (donor_id, user_id)
+                )
+
+            total_donations = int(donation_summary.get('total_donations') or 0)
+            total_units_donated = int(donation_summary.get('total_units_donated') or 0)
+            # Approximation commonly used in awareness campaigns.
+            lives_saved = total_units_donated * 3
+
             # 4) Donation history (only this donor)
             cursor.execute(
                 """
                 SELECT
                     donation_date,
                     units,
-                    health_status,
-                    'Main Blood Bank' as location
+                    'Red Lifeline Blood Bank' as hospital_name
                 FROM Donations
                 WHERE donor_id = %s
                 ORDER BY donation_date DESC
+                LIMIT 100
                 """,
                 (donor_id,)
             )
-            donation_history = cursor.fetchall() or []
+            history_rows = cursor.fetchall() or []
+            donation_history = []
+            for row in history_rows:
+                donation_history.append({
+                    'donation_date': row.get('donation_date'),
+                    'hospital': row.get('hospital_name') or 'Red Lifeline Blood Bank',
+                    'units': int(row.get('units') or 0),
+                    'status': 'Completed'
+                })
 
-            # 5) Emergency alert for donor blood group
+            # 5) Inventory alert for donor blood group
             current_units = get_available_units_for_group(
                 cursor,
-                donor['blood_group']
+                donor_blood_group
             )
             urgent_threshold = 10
             urgent_need = current_units <= urgent_threshold
 
-            # 6) Trend graph (last 5 donations)
+            # 6) Notifications from pending blood requests for donor blood group
+            notifications = []
+            if table_exists(cursor, 'Blood_Requests'):
+                has_urgency = column_exists(cursor, 'Blood_Requests', 'urgency')
+                has_notes = column_exists(cursor, 'Blood_Requests', 'notes')
+
+                request_select = """
+                    br.id as request_id,
+                    br.blood_group,
+                    br.units_required,
+                    br.request_date,
+                    h.name as hospital_name
+                """
+                if has_urgency:
+                    request_select += ", br.urgency"
+                else:
+                    request_select += ", 'Normal' as urgency"
+                if has_notes:
+                    request_select += ", br.notes"
+                else:
+                    request_select += ", NULL as notes"
+
+                request_order = "br.request_date ASC"
+                if has_urgency:
+                    request_order = """
+                        CASE br.urgency
+                            WHEN 'Critical' THEN 1
+                            WHEN 'High' THEN 2
+                            WHEN 'Normal' THEN 3
+                            ELSE 4
+                        END,
+                        br.request_date ASC
+                    """
+
+                cursor.execute(
+                    f"""
+                    SELECT {request_select}
+                    FROM Blood_Requests br
+                    LEFT JOIN Hospitals h ON br.hospital_id = h.id
+                    WHERE br.status = 'Pending'
+                      AND br.blood_group = %s
+                    ORDER BY {request_order}
+                    LIMIT 5
+                    """,
+                    (donor_blood_group,)
+                )
+                pending_requests = cursor.fetchall() or []
+
+                for req in pending_requests:
+                    urgency = req.get('urgency') or 'Normal'
+                    hospital_name = req.get('hospital_name') or 'Unknown Hospital'
+                    notifications.append({
+                        'request_id': req.get('request_id'),
+                        'blood_group': req.get('blood_group'),
+                        'units_required': int(req.get('units_required') or 0),
+                        'hospital_name': hospital_name,
+                        'request_date': req.get('request_date'),
+                        'urgency': urgency,
+                        'notes': req.get('notes') or '',
+                        'message': f"{urgency} Request: {donor_blood_group} needed at {hospital_name}",
+                        'is_urgent': urgency in ['Critical', 'High']
+                    })
+
+            urgent_notifications = [n for n in notifications if n.get('is_urgent')]
+            top_notification = urgent_notifications[0] if urgent_notifications else (notifications[0] if notifications else None)
+
+            # 7) Trend graph (recent donations)
             cursor.execute(
                 """
                 SELECT donation_date, units
                 FROM Donations
                 WHERE donor_id = %s
                 ORDER BY donation_date DESC
-                LIMIT 5
+                LIMIT 6
                 """,
                 (donor_id,)
             )
-            last_five = cursor.fetchall() or []
-            last_five.reverse()
+            recent_donations = cursor.fetchall() or []
+            recent_donations.reverse()
 
             trend_labels = []
             trend_units = []
-            for item in last_five:
+            for item in recent_donations:
                 donation_date = item.get('donation_date')
                 if isinstance(donation_date, datetime):
                     donation_date = donation_date.date()
                 trend_labels.append(donation_date.strftime('%d %b') if donation_date else '')
                 trend_units.append(int(item.get('units') or 0))
 
+            conn.commit()
             cursor.close()
             conn.close()
 
@@ -1140,21 +1397,33 @@ class DashboardManager:
                     'age': donor.get('age'),
                     'phone': donor.get('phone'),
                     'email': donor_email,
+                    'address': donor_address or 'Not provided',
+                    'profile_image_url': donor_profile_image_url,
                     'status': donor.get('status'),
-                    'availability': donor_availability
+                    'availability': donor_availability,
+                    'is_available': is_available
                 },
                 'summary': {
-                    'total_donations': int(donation_summary.get('total_donations') or 0),
+                    'total_donations': total_donations,
                     'last_donation_date': last_donation_date,
-                    'total_units_donated': int(donation_summary.get('total_units_donated') or 0),
+                    'total_units_donated': total_units_donated,
+                    'lives_saved': lives_saved,
                     'is_eligible': is_eligible,
-                    'next_eligible_date': next_eligible_date
+                    'next_eligible_date': next_eligible_date,
+                    'last_donation_label': (
+                        last_donation_date.strftime('%b %Y') if last_donation_date else 'Never'
+                    )
                 },
                 'donation_history': donation_history,
+                'notifications': notifications,
                 'alerts': {
-                    'urgent_need': urgent_need,
+                    'urgent_need': bool(top_notification) or urgent_need,
                     'current_units': current_units,
-                    'message': f"Urgent need for {donor.get('blood_group')} donors"
+                    'message': (
+                        top_notification.get('message')
+                        if top_notification
+                        else f"Urgent need for {donor_blood_group} donors"
+                    )
                 },
                 'trend': {
                     'labels': trend_labels,
@@ -1162,10 +1431,10 @@ class DashboardManager:
                 },
                 'capabilities': {
                     'can': [
-                        'Update phone/email',
+                        'Update profile',
                         'Mark availability',
                         'View donation history',
-                        'See next eligibility date'
+                        'Respond to urgent requests'
                     ],
                     'cannot': [
                         'See inventory',

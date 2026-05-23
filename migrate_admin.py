@@ -7,13 +7,12 @@ This script migrates your current admin account to the new user management syste
 import mysql.connector
 from werkzeug.security import generate_password_hash
 import sys
+import os
+from db_config import get_db_config
 
 # Database configuration
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'jefrin',
-    'database': 'blood_bank_db'
+    **get_db_config()
 }
 
 def migrate_admin():

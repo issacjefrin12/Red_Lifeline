@@ -19,6 +19,7 @@ import logging
 import os
 from typing import Tuple, Optional, Dict, Any
 from enum import Enum
+from db_config import get_db_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -78,11 +79,7 @@ class ApprovalAction(Enum):
 # ==================== DATABASE CONFIGURATION ====================
 
 DB_CONFIG = {
-    'host': os.getenv('BBMS_DB_HOST', 'localhost'),
-    'user': os.getenv('BBMS_DB_USER', 'root'),
-    'password': os.getenv('BBMS_DB_PASSWORD', 'jefrin'),
-    'database': os.getenv('BBMS_DB_NAME', 'blood_bank_db'),
-    'port': int(os.getenv('BBMS_DB_PORT', '3306')),
+    **get_db_config(),
     'autocommit': False,  # Critical: Must be False for transaction control
     'use_pure': True,     # Use pure Python implementation
 }
