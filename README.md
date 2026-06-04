@@ -143,8 +143,10 @@ On first run, the app seeds default operational users (if missing). Update these
 
 - Admin username: `admin`
 - Admin password: value of `BBMS_ADMIN_PASSWORD` (default: `admin123`)
-- Staff username: `staff`
-- Staff password: value of `BBMS_STAFF_PASSWORD` (default: `staff123`)
+- Blood Bank Admin email: `bbadmin@gmail.com`
+- Blood Bank Admin password: value of `BBMS_Blood Bank Admin_PASSWORD` (default: `bbadmin@123`)
+- Hospital User email : 'hospitaluser@gmail.com'
+- Hospital User password: value of `BBMS_hospitaluser_PASSWORD` (default: `hospitaluser@123`)
 
 ## Key Routes
 
@@ -178,6 +180,8 @@ On first run, the app seeds default operational users (if missing). Update these
 <img width="1919" height="1025" alt="Screenshot 2026-03-18 190801" src="https://github.com/user-attachments/assets/26c2257c-ab11-4254-82aa-9f72ddca8e32" />
 <img width="1919" height="1031" alt="Screenshot 2026-03-18 190529" src="https://github.com/user-attachments/assets/1e040352-9821-47d2-8846-2d6ab40faa31" />
 
+## Demo Video Link
+https://drive.google.com/file/d/1eLTRxceuAffNo4ElKmtRN-goM5EJ0cWV/view?usp=sharing
 
 ## Developed By
 
